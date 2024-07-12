@@ -1,106 +1,130 @@
-#include <cuda.h> // CUtensormap
+// This code uses TMA's 1d load to load a matrix's tile to
+// shared memory and then change the value in the
+// shared memory and uses TMA's store to store the
+// tile back to global memory.
+
 #include <cuda/barrier>
+#include <cuda/std/utility> // cuda::std::move
+#include <stdio.h>
+#include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
+#include <cuda.h>
+
+#include "test_macros.cuh"    // TEST_NV_DIAG_SUPPRESS
+#include "tma_tensor_map.cuh" // TEST_NV_DIAG_SUPPRESS
+
+
+// Suppress warning about barrier in shared memory
+TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
+
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
 
-#include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
+constexpr size_t GMEM_WIDTH = 64;  // Width of tensor (in # elements)
+constexpr size_t GMEM_HEIGHT = 64; // Height of tensor (in # elements)
+constexpr size_t gmem_len = GMEM_WIDTH * GMEM_HEIGHT;
 
-const int GMEM_WIDTH = 1024;
-const int GMEM_HEIGHT = 1024;
+constexpr int SMEM_WIDTH = 16;  // Width of shared memory buffer (in # elements)
+constexpr int SMEM_HEIGHT = 16; // Height of shared memory buffer (in # elements)
 
-const int SMEM_WIDTH = 128;
-const int SMEM_HEIGHT = 128;
+static constexpr int buf_len = SMEM_HEIGHT * SMEM_WIDTH;
 
-PFN_cuTensorMapEncodeTiled_v12000 get_cuTensorMapEncodeTiled()
+__device__ int gmem_tensor[gmem_len];
+
+// We need a type with a size. On NVRTC, cuda.h cannot be imported, so we don't
+// have access to the definition of CUTensorMap (only to the declaration of CUtensorMap inside
+// cuda/barrier). So we use this type instead and reinterpret_cast in the
+// kernel.
+struct fake_cutensormap
 {
-  // Get pointer to cuGetProcAddress
-  cudaDriverEntryPointQueryResult driver_status;
-  void *cuGetProcAddress_ptr = nullptr;
-  CUDA_CHECK(cudaGetDriverEntryPoint("cuGetProcAddress", &cuGetProcAddress_ptr, cudaEnableDefault, &driver_status));
-  assert(driver_status == cudaDriverEntryPointSuccess);
-  PFN_cuGetProcAddress_v12000 cuGetProcAddress = reinterpret_cast<PFN_cuGetProcAddress_v12000>(cuGetProcAddress_ptr);
+  alignas(64) uint64_t opaque[16];
+};
+__constant__ fake_cutensormap global_fake_tensor_map;
 
-  // Use cuGetProcAddress to get a pointer to the CTK 12.0 version of cuTensorMapEncodeTiled
-  CUdriverProcAddressQueryResult symbol_status;
-  void *cuTensorMapEncodeTiled_ptr = nullptr;
-  CUresult res = cuGetProcAddress("cuTensorMapEncodeTiled", &cuTensorMapEncodeTiled_ptr, 12000, CU_GET_PROC_ADDRESS_DEFAULT, &symbol_status);
-  assert(res == CUDA_SUCCESS && symbol_status == CU_GET_PROC_ADDRESS_SUCCESS);
-
-  return reinterpret_cast<PFN_cuTensorMapEncodeTiled_v12000>(cuTensorMapEncodeTiled_ptr);
-}
-
-__global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int x, int y)
+__global__ void test(int base_i, int base_j)
 {
-  // The destination shared memory buffer of a bulk tensor operation should be
-  // 128 byte aligned.
-  __shared__ alignas(128) int smem_buffer[SMEM_HEIGHT][SMEM_WIDTH];
+  CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
 
-// Initialize shared memory barrier with the number of threads participating in the barrier.
-#pragma nv_diag_suppress static_var_with_dynamic_init
-  __shared__ barrier bar;
-
-  if (threadIdx.x == 0)
+  // SETUP: fill global memory buffer
+  for (int i = threadIdx.x; i < gmem_len; i += blockDim.x)
   {
-    // Initialize barrier. All `blockDim.x` threads in block participate.
-    init(&bar, blockDim.x);
-    // Make initialized barrier visible in async proxy.
-    cde::fence_proxy_async_shared_cta();
+    gmem_tensor[i] = i;
   }
-  // Syncthreads so initialized barrier is visible to all threads.
+  // Ensure that writes to global memory are visible to others, including
+  // those in the async proxy.
+  __threadfence();
   __syncthreads();
 
-  barrier::arrival_token token;
+  // TEST: Add i to buffer[i]
+  __shared__ alignas(128) int smem_buffer[buf_len];
+  __shared__ barrier bar;
+  
   if (threadIdx.x == 0)
   {
-    // Initiate bulk tensor copy.
-    cde::cp_async_bulk_tensor_2d_global_to_shared(&smem_buffer, &tensor_map, x, y, bar);
-    // Arrive on the barrier and tell how many bytes are expected to come in.
+    init(&bar, blockDim.x);
+  }
+  __syncthreads();
+
+  // Load data:
+  uint64_t token;
+  if (threadIdx.x == 0)
+  {
+    // Fastest moving coordinate first.
+    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, global_tensor_map, base_j, base_i, bar);
     token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
   }
   else
   {
-    // Other threads just arrive.
     token = bar.arrive();
   }
-  // Wait for the data to have arrived.
-  bar.wait(std::move(token));
+  
+  bar.wait(cuda::std::move(token));
 
-  // Symbolically modify a value in shared memory.
-  smem_buffer[0][threadIdx.x] += threadIdx.x;
+  // Check smem
+  for (int i = 0; i < SMEM_HEIGHT; ++i)
+  {
+    for (int j = 0; j < SMEM_HEIGHT; ++j)
+    {
+      const int gmem_lin_idx = (base_i + i) * GMEM_WIDTH + base_j + j;
+      const int smem_lin_idx = i * SMEM_WIDTH + j;
 
-  // Wait for shared memory writes to be visible to TMA engine.
+      assert(smem_buffer[smem_lin_idx] == gmem_lin_idx);
+    }
+  }
+
+  __syncthreads();
+
+  // Update smem
+  for (int i = threadIdx.x; i < buf_len; i += blockDim.x)
+  {
+    smem_buffer[i] = 2;
+  }
+
   cde::fence_proxy_async_shared_cta();
   __syncthreads();
-  // After syncthreads, writes by all threads are visible to TMA engine.
 
-  // Initiate TMA transfer to copy shared memory to global memory
+  // Write back to global memory:
   if (threadIdx.x == 0)
   {
-    cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map, x, y, &smem_buffer);
-    // Wait for TMA transfer to have finished reading shared memory.
-    // Create a "bulk async-group" out of the previous bulk copy operation.
+    cde::cp_async_bulk_tensor_2d_shared_to_global(global_tensor_map, base_j, base_i, smem_buffer);
     cde::cp_async_bulk_commit_group();
-    // Wait for the group to have completed reading from shared memory.
     cde::cp_async_bulk_wait_group_read<0>();
   }
-
-  // Destroy barrier. This invalidates the memory region of the barrier. If
-  // further computations were to take place in the kernel, this allows the
-  // memory location of the shared memory barrier to be reused.
-  if (threadIdx.x == 0)
-  {
-    (&bar)->~barrier();
-  }
+  __threadfence();
+  __syncthreads();
 }
 
 int main()
 {
+  // NV_IF_TARGET(NV_IS_HOST, (
+  // Required by concurrent_agents_launch to know how many we're launching
+  int cuda_thread_count = 128;
 
-  void *tensor_ptr = nullptr;
+  int *tensor_ptr = nullptr;
+  auto code = cudaGetSymbolAddress((void **)&tensor_ptr, gmem_tensor);
+  assert(code == cudaSuccess && "getsymboladdress failed.");
 
-  tensor_ptr = malloc(GMEM_WIDTH * GMEM_HEIGHT * sizeof(int));
-  
-  CUtensorMap tensor_map{};
+  // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
+  CUtensorMap local_tensor_map{};
   // rank is the number of dimensions of the array.
   constexpr uint32_t rank = 2;
   uint64_t size[rank] = {GMEM_WIDTH, GMEM_HEIGHT};
@@ -119,7 +143,7 @@ int main()
 
   // Create the tensor descriptor.
   CUresult res = cuTensorMapEncodeTiled(
-      &tensor_map, // CUtensorMap *tensorMap,
+      &local_tensor_map, // CUtensorMap *tensorMap,
       CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_INT32,
       rank,        // cuuint32_t tensorRank,
       tensor_ptr,  // void *globalAddress,
@@ -127,14 +151,47 @@ int main()
       stride,      // const cuuint64_t *globalStrides,
       box_size,    // const cuuint32_t *boxDim,
       elem_stride, // const cuuint32_t *elementStrides,
-      // Interleave patterns can be used to accelerate loading of values that
-      // are less than 4 bytes long.
       CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
-      // Swizzling can be used to avoid shared memory bank conflicts.
       CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
-      // L2 Promotion can be used to widen the effect of a cache-policy to a wider
-      // set of L2 cache lines.
       CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
-      // Any element that is outside of bounds will be set to zero by the TMA transfer.
       CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
+
+  assert(res == CUDA_SUCCESS && "tensormap creation failed.");
+
+  code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
+  assert(code == cudaSuccess && "memcpytosymbol failed.");
+
+  // launch kernel
+  test<<<1, cuda_thread_count>>>(0, 0);
+
+  cudaDeviceSynchronize();
+
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    printf("CUDA error: %s\n", cudaGetErrorString(err));
+  }
+
+  int host_gmem_tensor[gmem_len];
+  code = cudaMemcpyFromSymbol(host_gmem_tensor, gmem_tensor, sizeof(gmem_tensor));
+  assert(code == cudaSuccess && "memcpyfromsymbol failed.");
+
+  // verify the results
+  for (int i = 0; i < SMEM_HEIGHT; ++i)
+  {
+    for (int j = 0; j < SMEM_HEIGHT; ++j)
+    {
+      int gmem_lin_idx = i * GMEM_WIDTH + j;
+      if (host_gmem_tensor[gmem_lin_idx] != 2 * gmem_lin_idx + 1)
+      {
+        printf("Mismatch at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
+      }
+      else
+      {
+        printf("Match at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
+      }
+    }
+  }
+
+  return 0;
 }
