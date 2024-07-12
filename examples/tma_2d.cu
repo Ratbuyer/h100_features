@@ -9,8 +9,9 @@
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
 #include <cuda.h>
 
-#include "test_macros.cuh"    // TEST_NV_DIAG_SUPPRESS
-#include "tma_tensor_map.cuh" // TEST_NV_DIAG_SUPPRESS
+#include "test_macros.cuh"   
+#include "tma_tensor_map.cuh"
+#include "matrix_utilities.cuh"
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
@@ -168,23 +169,7 @@ int main()
   // assert(code == cudaSuccess && "memcpyfromsymbol failed.");
 
   // verify the results
-  for (int i = 0; i < SMEM_HEIGHT; ++i)
-  {
-    for (int j = 0; j < SMEM_HEIGHT; ++j)
-    {
-      int gmem_lin_idx = (i + tile_i * SMEM_HEIGHT) * GMEM_WIDTH + j + tile_j * SMEM_WIDTH;
-      if (host_gmem_tensor[gmem_lin_idx] != 2 * gmem_lin_idx + 1)
-      {
-        printf("Mismatch at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
-      }
-      else
-      {
-        printf("Match at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
-      }
-    }
-  }
-
-  printf("first element: %d\n", host_gmem_tensor[0]);
+  print_matrix(host_gmem_tensor, GMEM_WIDTH, GMEM_HEIGHT);
 
   return 0;
 }
