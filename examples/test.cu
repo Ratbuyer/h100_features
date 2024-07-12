@@ -7,8 +7,11 @@
 #include <cuda/std/utility> // cuda::std::move
 #include <stdio.h>
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
+#include <cuda.h>
 
-#include "test_macros.h" // TEST_NV_DIAG_SUPPRESS
+#include "test_macros.cuh"    // TEST_NV_DIAG_SUPPRESS
+#include "tma_tensor_map.cuh" // TEST_NV_DIAG_SUPPRESS
+
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
@@ -107,17 +110,6 @@ __global__ void test(int base_i, int base_j)
   __threadfence();
   __syncthreads();
 }
-
-#ifndef TEST_COMPILER_NVRTC
-PFN_cuTensorMapEncodeTiled get_cuTensorMapEncodeTiled()
-{
-  void *driver_ptr = nullptr;
-  cudaDriverEntryPointQueryResult driver_status;
-  auto code = cudaGetDriverEntryPoint("cuTensorMapEncodeTiled", &driver_ptr, cudaEnableDefault, &driver_status);
-  assert(code == cudaSuccess && "Could not get driver API");
-  return reinterpret_cast<PFN_cuTensorMapEncodeTiled>(driver_ptr);
-}
-#endif // ! TEST_COMPILER_NVRTC
 
 int main()
 {
