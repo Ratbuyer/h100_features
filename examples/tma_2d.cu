@@ -153,7 +153,7 @@ int main()
   assert(code == cudaSuccess && "memcpytosymbol failed.");
 
   // launch kernel
-  test<<<1, cuda_thread_count>>>(0, 0);
+  test<<<1, cuda_thread_count>>>(1, 1);
 
   cudaDeviceSynchronize();
 
@@ -183,6 +183,8 @@ int main()
       }
     }
   }
+
+  printf("first element: %d\n", host_gmem_tensor[0]);
 
   return 0;
 }
