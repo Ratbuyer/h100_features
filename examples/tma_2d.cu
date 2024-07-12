@@ -38,11 +38,12 @@ struct fake_cutensormap
 {
   alignas(64) uint64_t opaque[16];
 };
-__constant__ fake_cutensormap global_fake_tensor_map;
+
+__constant__ CUtensorMap global_fake_tensor_map;
 
 __global__ void test(int base_i, int base_j)
 {
-  CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
+  // CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
 
   // TEST: Add i to buffer[i]
   __shared__ alignas(128) int smem_buffer[buf_len];
@@ -59,7 +60,7 @@ __global__ void test(int base_i, int base_j)
   if (threadIdx.x == 0)
   {
     // Fastest moving coordinate first.
-    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, global_tensor_map, base_j, base_i, bar);
+    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, base_j, base_i, bar);
     token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
   }
   else
