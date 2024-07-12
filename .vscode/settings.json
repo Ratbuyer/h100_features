@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "random": "cpp",
+    "iostream": "cpp",
+    "cmath": "cpp",
+    "barrier": "cpp",
+    "__config": "cpp",
+    "__target_macros": "cpp",
+    "atomic": "cpp"
+  }
+}
