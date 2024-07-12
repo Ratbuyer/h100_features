@@ -6,6 +6,10 @@ LINKS=-lcudart -lcuda
 OUTPUT=bins/bin
 
 
+all:
+	make tma_2d
+	make run
+
 test:
 	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/test.cu
 
@@ -31,10 +35,6 @@ push:
 	git add .
 	git commit -m "update"
 	git push
-
-all:
-	make test
-	make run
 
 run:
 	./${OUTPUT}
