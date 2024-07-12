@@ -96,7 +96,7 @@ __global__ void test(int base_i, int base_j)
   // Write back to global memory:
   if (threadIdx.x == 0)
   {
-    cde::cp_async_bulk_tensor_2d_shared_to_global(global_tensor_map, base_j, base_i, smem_buffer);
+    cde::cp_async_bulk_tensor_2d_shared_to_global(&global_fake_tensor_map, base_j, base_i, smem_buffer);
     cde::cp_async_bulk_commit_group();
     cde::cp_async_bulk_wait_group_read<0>();
   }
