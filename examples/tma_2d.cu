@@ -30,9 +30,6 @@ static constexpr int buf_len = SMEM_HEIGHT * SMEM_WIDTH;
 
 __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map, int base_i, int base_j)
 {
-  // CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
-
-  // TEST: Add i to buffer[i]
   __shared__ alignas(128) int smem_buffer[buf_len];
   __shared__ barrier bar;
 
@@ -57,21 +54,9 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
 
   bar.wait(cuda::std::move(token));
 
-  // Check smem
-  // for (int i = 0; i < SMEM_HEIGHT; ++i)
-  // {
-  //   for (int j = 0; j < SMEM_HEIGHT; ++j)
-  //   {
-  //     const int gmem_lin_idx = (base_i + i) * GMEM_WIDTH + base_j + j;
-  //     const int smem_lin_idx = i * SMEM_WIDTH + j;
-
-  //     assert(smem_buffer[smem_lin_idx] == gmem_lin_idx);
-  //   }
-  // }
-
   __syncthreads();
 
-  // Update smem
+  // Update smem, change from 1 to 2
   for (int i = threadIdx.x; i < buf_len; i += blockDim.x)
   {
     smem_buffer[i] = 2;
@@ -140,23 +125,22 @@ int main()
 
   assert(res == CUDA_SUCCESS && "tensormap creation failed.");
 
-  // auto code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
-  // CUtensorMap *device_tensor_map
-  //assert(code == cudaSuccess && "memcpytosymbol failed.");
 
   // launch kernel, select a tile coordinate
-  int tile_i = 16;
+  int tile_i = 0;
   int tile_j = 16;
   test<<<1, 128>>>(local_tensor_map, tile_i, tile_j);
 
   cudaDeviceSynchronize();
 
+  // check for kernel errors
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     printf("CUDA error: %s\n", cudaGetErrorString(err));
   }
 
+  // copy device matrix to host
   int host_gmem_tensor[gmem_len];
   cudaMemcpy(host_gmem_tensor, tensor_ptr, gmem_len * sizeof(int), cudaMemcpyDeviceToHost);
 
