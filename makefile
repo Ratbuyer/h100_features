@@ -1,4 +1,4 @@
-sm_version=90
+sm_version=90a
 NVCC=/usr/local/cuda-12.4/bin/nvcc
 INCLUDES=-I./headers/device/ -I./headers/host/
 OPTIMIZATION=-O0
@@ -37,7 +37,7 @@ all:
 	make run
 
 run:
-	./bins/bin
+	./${OUTPUT}
 
 clean:
 	rm -rf bins/*
