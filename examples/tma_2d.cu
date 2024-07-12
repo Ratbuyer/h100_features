@@ -12,7 +12,6 @@
 #include "test_macros.cuh"    // TEST_NV_DIAG_SUPPRESS
 #include "tma_tensor_map.cuh" // TEST_NV_DIAG_SUPPRESS
 
-
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
 
@@ -44,11 +43,10 @@ __global__ void test(int base_i, int base_j)
 {
   CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
 
-
   // TEST: Add i to buffer[i]
   __shared__ alignas(128) int smem_buffer[buf_len];
   __shared__ barrier bar;
-  
+
   if (threadIdx.x == 0)
   {
     init(&bar, blockDim.x);
@@ -67,7 +65,7 @@ __global__ void test(int base_i, int base_j)
   {
     token = bar.arrive();
   }
-  
+
   bar.wait(cuda::std::move(token));
 
   // Check smem
@@ -153,7 +151,9 @@ int main()
   assert(code == cudaSuccess && "memcpytosymbol failed.");
 
   // launch kernel
-  test<<<1, cuda_thread_count>>>(1, 1);
+  int tile_i = 1;
+  int tile_j = 1;
+  test<<<1, cuda_thread_count>>>(tile_i, tile_j);
 
   cudaDeviceSynchronize();
 
@@ -172,7 +172,7 @@ int main()
   {
     for (int j = 0; j < SMEM_HEIGHT; ++j)
     {
-      int gmem_lin_idx = i * GMEM_WIDTH + j;
+      int gmem_lin_idx = (i + tile_i * SMEM_HEIGHT) * GMEM_WIDTH + j + tile_j * SMEM_WIDTH;
       if (host_gmem_tensor[gmem_lin_idx] != 2 * gmem_lin_idx + 1)
       {
         printf("Mismatch at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
