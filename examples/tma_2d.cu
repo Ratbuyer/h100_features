@@ -152,8 +152,8 @@ int main()
   assert(code == cudaSuccess && "memcpytosymbol failed.");
 
   // launch kernel
-  int tile_i = 0;
-  int tile_j = 0;
+  int tile_i = 16;
+  int tile_j = 16;
   test<<<1, cuda_thread_count>>>(tile_i, tile_j);
 
   cudaDeviceSynchronize();
