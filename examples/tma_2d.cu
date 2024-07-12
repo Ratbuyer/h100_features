@@ -105,7 +105,7 @@ __global__ void test(int base_i, int base_j)
 
 int main()
 {
-  // set host matrix to 0
+  // set host matrix to 1
   int host_tensor[gmem_len];
   for (int i = 0; i < gmem_len; i++)
   {
@@ -155,7 +155,7 @@ int main()
   auto code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
   assert(code == cudaSuccess && "memcpytosymbol failed.");
 
-  // launch kernel
+  // launch kernel, select a tile coordinate
   int tile_i = 16;
   int tile_j = 16;
   test<<<1, 128>>>(tile_i, tile_j);
@@ -169,8 +169,7 @@ int main()
   }
 
   int host_gmem_tensor[gmem_len];
-  code = cudaMemcpy(host_gmem_tensor, tensor_ptr, gmem_len * sizeof(int), cudaMemcpyDeviceToHost);
-  // assert(code == cudaSuccess && "memcpyfromsymbol failed.");
+  cudaMemcpy(host_gmem_tensor, tensor_ptr, gmem_len * sizeof(int), cudaMemcpyDeviceToHost);
 
   // verify the results
   print_matrix(host_gmem_tensor, GMEM_WIDTH, GMEM_HEIGHT);
