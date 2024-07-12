@@ -28,8 +28,6 @@ constexpr int SMEM_HEIGHT = 16; // Height of shared memory buffer (in # elements
 
 static constexpr int buf_len = SMEM_HEIGHT * SMEM_WIDTH;
 
-__device__ int gmem_tensor[gmem_len];
-
 // We need a type with a size. On NVRTC, cuda.h cannot be imported, so we don't
 // have access to the definition of CUTensorMap (only to the declaration of CUtensorMap inside
 // cuda/barrier). So we use this type instead and reinterpret_cast in the
@@ -38,25 +36,17 @@ struct fake_cutensormap
 {
   alignas(64) uint64_t opaque[16];
 };
+
 __constant__ fake_cutensormap global_fake_tensor_map;
 
 __global__ void test(int base_i, int base_j)
 {
   CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
 
-  // SETUP: fill global memory buffer
-  for (int i = threadIdx.x; i < gmem_len; i += blockDim.x)
-  {
-    gmem_tensor[i] = i;
-  }
-  // Ensure that writes to global memory are visible to others, including
-  // those in the async proxy.
-  __threadfence();
-  __syncthreads();
-
   // TEST: Add i to buffer[i]
   __shared__ alignas(128) int smem_buffer[buf_len];
   __shared__ barrier bar;
+
   if (threadIdx.x == 0)
   {
     init(&bar, blockDim.x);
@@ -75,6 +65,7 @@ __global__ void test(int base_i, int base_j)
   {
     token = bar.arrive();
   }
+
   bar.wait(cuda::std::move(token));
 
   // Check smem
@@ -115,7 +106,7 @@ int main()
 {
   // NV_IF_TARGET(NV_IS_HOST, (
   // Required by concurrent_agents_launch to know how many we're launching
-  int cuda_thread_count = 128;
+  __device__ int gmem_tensor[gmem_len];
 
   int *tensor_ptr = nullptr;
   auto code = cudaGetSymbolAddress((void **)&tensor_ptr, gmem_tensor);
@@ -155,11 +146,12 @@ int main()
       CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
 
   assert(res == CUDA_SUCCESS && "tensormap creation failed.");
+
   code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
   assert(code == cudaSuccess && "memcpytosymbol failed.");
 
   // launch kernel
-  test<<<1, cuda_thread_count>>>(0, 0);
+  test<<<1, 128>>>(0, 0);
 
   cudaDeviceSynchronize();
 
