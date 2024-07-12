@@ -112,6 +112,7 @@ int main()
   int *tensor_ptr = nullptr;
 
   cudaMalloc(&tensor_ptr, gmem_len * sizeof(int));
+  cudaMemset(tensor_ptr, 1, gmem_len * sizeof(int));
 
   // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
   CUtensorMap local_tensor_map{};
