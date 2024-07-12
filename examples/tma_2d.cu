@@ -39,9 +39,9 @@ struct fake_cutensormap
   alignas(64) uint64_t opaque[16];
 };
 
-__constant__ CUtensorMap global_fake_tensor_map;
+// __constant__ CUtensorMap global_fake_tensor_map;
 
-__global__ void test(int base_i, int base_j)
+__global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map, int base_i, int base_j)
 {
   // CUtensorMap *global_tensor_map = reinterpret_cast<CUtensorMap *>(&global_fake_tensor_map);
 
@@ -153,13 +153,14 @@ int main()
 
   assert(res == CUDA_SUCCESS && "tensormap creation failed.");
 
-  auto code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
-  assert(code == cudaSuccess && "memcpytosymbol failed.");
+  // auto code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
+  // CUtensorMap *device_tensor_map
+  //assert(code == cudaSuccess && "memcpytosymbol failed.");
 
   // launch kernel, select a tile coordinate
   int tile_i = 16;
   int tile_j = 16;
-  test<<<1, 128>>>(tile_i, tile_j);
+  test<<<1, 128>>>(local_tensor_map, tile_i, tile_j);
 
   cudaDeviceSynchronize();
 
