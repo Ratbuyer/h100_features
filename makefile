@@ -1,26 +1,40 @@
 sm_version=90
 NVCC=/usr/local/cuda-12.4/bin/nvcc
+INCLUDES=-I./headers/device/ -I./headers/host/
+OPTIMIZATION=-O0
+LINKS=-lcudart -lcuda
+OUTPUT=bins/bin
+
+
+test:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/test.cu
+
+dense:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/wgmma_dense.cu
+
+sparse:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/wgmma_sparse.cu
+
+overlap:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/overlap.cu
+
+gemm:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/gemm.cu
+
+tma_1d:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/tma_1d.cu
+
+tma_2d:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/tma_2d.cu
+
+push:
+	git add .
+	git commit -m "update"
+	git push
 
 all:
 	make test
 	make run
-
-sparse:
-	${NVCC} -arch=sm_${sm_version} -O0 examples/sparse.cu -lcudart -lcuda -o bins/bin
-
-overlap:
-	${NVCC} -arch=sm_${sm_version} -O0 examples/overlap.cu -lcudart -lcuda -o bins/bin
-
-dense:
-	${NVCC} -arch=sm_${sm_version} -O0 examples/dense.cu -lcudart -lcuda -o bins/bin
-
-test:
-	${NVCC} -arch=sm_${sm_version} -O0 examples/test.cu -lcudart -lcuda -o bins/bin
-
-gemm:
-	${NVCC} -arch=sm_${sm_version} -O0 examples/gemm.cu -lcudart -lcuda -o bins/bin
-
-
 
 run:
 	./bins/bin

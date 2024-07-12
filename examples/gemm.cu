@@ -1,3 +1,6 @@
+// This code combines the features on H100 to do gemm.
+
+
 #include <stdio.h>
 #include <cuda.h>
 #include <mma.h>

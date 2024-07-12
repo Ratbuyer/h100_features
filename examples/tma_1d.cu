@@ -1,9 +1,17 @@
+// This code uses TMA's 1d load to load an array to
+// shared memory and then change the value in the
+// shared memory and uses TMA's store to store the
+// array back to global memory.
+
 #include <cuda/barrier>
 #include <iostream>
+
+
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
 
 static constexpr size_t buf_len = 1024;
+
 __global__ void add_one_kernel(int* data, size_t offset)
 {
   // Shared memory buffers for x and y. The destination shared memory buffer of

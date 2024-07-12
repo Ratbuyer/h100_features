@@ -1,3 +1,6 @@
+// This code demonstrates that smarter interleaving of 
+// aysnc wgmma and cuda core calls can overlap works and reduce time
+
 #include <cuda_fp16.h>
 #include <stdio.h>
 #include <cuda.h>
@@ -8,14 +11,15 @@
 #include <iostream>
 #include <cuda_runtime.h>
 
-#include "../headers/device/descriptor.cuh"
-#include "../headers/host/kernel.cuh"
+#include "descriptor.cuh"
+#include "kernel.cuh"
 
 const int threads_per_block = 32 * 4; // 4 warps
 const int blocks = 1;
 
 const int iteration = 10000000;
 
+// only cuda core work
 __global__ void cuda_core_work(int *result)
 {
 
@@ -32,6 +36,7 @@ __global__ void cuda_core_work(int *result)
   result[0] = sum;
 }
 
+// only wgmma work
 __global__ void tensor_core_work(int *result)
 {
   const int M = 64;
@@ -69,6 +74,7 @@ __global__ void tensor_core_work(int *result)
   result[0] = c[0] + c[1];
 }
 
+// incorrect ordering
 __global__ void overlap_v1(int *result)
 {
   const int M = 64;
@@ -117,6 +123,7 @@ __global__ void overlap_v1(int *result)
   result[0] += reinterpret_cast<int &>(sum);
 }
 
+// correct interleaving
 __global__ void overlap_v2(int *result)
 {
   const int M = 64;
@@ -200,7 +207,7 @@ int main()
 
   printf("Result: %d\n", h_result);
 
-  // overlap
+  // overlap 1
 
   timer.start_timer();
 

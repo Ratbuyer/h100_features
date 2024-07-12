@@ -1,31 +1,14 @@
-//===----------------------------------------------------------------------===//
-//
-// Part of libcu++, the C++ Standard Library for your entire system,
-// under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
-//
-//===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: pre-sm-90
-// UNSUPPORTED: nvcc-11
-// UNSUPPORTED: nvrtc
-// NVRTC_SKIP_KERNEL_RUN // This will have effect once PR 433 is merged (line above should be removed.)
-
-// <cuda/barrier>
+// This code uses TMA's 1d load to load a matrix's tile to
+// shared memory and then change the value in the
+// shared memory and uses TMA's store to store the
+// tile back to global memory.
 
 #include <cuda/barrier>
 #include <cuda/std/utility> // cuda::std::move
-#include "test_macros.h"    // TEST_NV_DIAG_SUPPRESS
-
 #include <stdio.h>
-
-// NVRTC does not support cuda.h (due to import of stdlib.h)
-#ifndef TEST_COMPILER_NVRTC
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
-#endif                    // !TEST_COMPILER_NVRTC
+
+#include "test_macros.h" // TEST_NV_DIAG_SUPPRESS
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
@@ -41,6 +24,7 @@ constexpr int SMEM_WIDTH = 16;  // Width of shared memory buffer (in # elements)
 constexpr int SMEM_HEIGHT = 16; // Height of shared memory buffer (in # elements)
 
 static constexpr int buf_len = SMEM_HEIGHT * SMEM_WIDTH;
+
 __device__ int gmem_tensor[gmem_len];
 
 // We need a type with a size. On NVRTC, cuda.h cannot be imported, so we don't
@@ -122,7 +106,6 @@ __global__ void test(int base_i, int base_j)
   }
   __threadfence();
   __syncthreads();
-
 }
 
 #ifndef TEST_COMPILER_NVRTC
@@ -136,7 +119,7 @@ PFN_cuTensorMapEncodeTiled get_cuTensorMapEncodeTiled()
 }
 #endif // ! TEST_COMPILER_NVRTC
 
-int main(int, char **)
+int main()
 {
   // NV_IF_TARGET(NV_IS_HOST, (
   // Required by concurrent_agents_launch to know how many we're launching
@@ -183,13 +166,6 @@ int main(int, char **)
   code = cudaMemcpyToSymbol(global_fake_tensor_map, &local_tensor_map, sizeof(CUtensorMap));
   assert(code == cudaSuccess && "memcpytosymbol failed.");
 
-  // NV_DISPATCH_TARGET(
-  //     NV_IS_DEVICE, (
-  //                       test(0, 0);
-  //                       test(4, 0);
-  //                       test(4, 4);)
-  // );
-
   // launch kernel
   test<<<1, cuda_thread_count>>>(0, 0);
 
@@ -205,8 +181,7 @@ int main(int, char **)
   code = cudaMemcpyFromSymbol(host_gmem_tensor, gmem_tensor, sizeof(gmem_tensor));
   assert(code == cudaSuccess && "memcpyfromsymbol failed.");
 
-  // Verify the results
-  bool success = true;
+  // verify the results
   for (int i = 0; i < SMEM_HEIGHT; ++i)
   {
     for (int j = 0; j < SMEM_HEIGHT; ++j)
@@ -215,9 +190,9 @@ int main(int, char **)
       if (host_gmem_tensor[gmem_lin_idx] != 2 * gmem_lin_idx + 1)
       {
         printf("Mismatch at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
-        success = false;
       }
-      else {
+      else
+      {
         printf("Match at (%d, %d): expected %d, got %d\n", i, j, 2 * gmem_lin_idx + 1, host_gmem_tensor[gmem_lin_idx]);
       }
     }

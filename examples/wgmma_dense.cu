@@ -1,3 +1,5 @@
+// This code demonstrates how to use the wgmma instructions
+
 #include <stdio.h>
 #include <cuda.h>
 #include <mma.h>
