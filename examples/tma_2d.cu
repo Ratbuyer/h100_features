@@ -9,7 +9,7 @@
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
 #include <cuda.h>
 
-#include "test_macros.cuh"   
+#include "test_macros.cuh"
 #include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
 
@@ -105,14 +105,17 @@ __global__ void test(int base_i, int base_j)
 
 int main()
 {
-  // NV_IF_TARGET(NV_IS_HOST, (
-  // Required by concurrent_agents_launch to know how many we're launching
-  int cuda_thread_count = 128;
+  // set host matrix to 0
+  int host_tensor[gmem_len];
+  for (int i = 0; i < gmem_len; i++)
+  {
+    host_tensor[i] = 1;
+  }
 
+  // copy host matrix to device
   int *tensor_ptr = nullptr;
-
   cudaMalloc(&tensor_ptr, gmem_len * sizeof(int));
-  cudaMemset(tensor_ptr, 1, gmem_len * sizeof(int));
+  cudaMemcpy(tensor_ptr, host_tensor, gmem_len * sizeof(int), cudaMemcpyHostToDevice);
 
   // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
   CUtensorMap local_tensor_map{};
@@ -155,7 +158,7 @@ int main()
   // launch kernel
   int tile_i = 16;
   int tile_j = 16;
-  test<<<1, cuda_thread_count>>>(tile_i, tile_j);
+  test<<<1, 128>>>(tile_i, tile_j);
 
   cudaDeviceSynchronize();
 
