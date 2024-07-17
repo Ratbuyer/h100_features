@@ -1,4 +1,4 @@
-sm_version=90a
+sm_version=86
 NVCC=/usr/local/cuda-12.4/bin/nvcc
 INCLUDES=-I./headers/device/ -I./headers/host/
 OPTIMIZATION=-O0
