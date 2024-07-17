@@ -9,6 +9,8 @@ __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
   namespace cg = cooperative_groups;
   int tid = cg::this_grid().thread_rank();
 
+  printf("tid: %d\n", tid);
+
   cg::cluster_group cluster = cg::this_cluster();
   unsigned int clusterBlockRank = cluster.block_rank();
   int cluster_size = cluster.dim_blocks().x;
