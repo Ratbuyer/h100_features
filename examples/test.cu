@@ -14,17 +14,21 @@ __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
   cg::cluster_group cluster = cg::this_cluster();
   unsigned int clusterBlockRank = cluster.block_rank();
   int cluster_size = cluster.dim_blocks().x;
-
+  
+  // cluster size = nubmer of blocks in the cluster
   if (tid == 0) {
     printf("cluster_size: %d\n", cluster_size);
   }
-
+  
+  // initialize shared memory, block 1 has one value higher than block 0
   smem[threadIdx.x] = blockIdx.x + threadIdx.x;
 
   cluster.sync();
 
+  // get the shared memory of the other block
   int *other_block_smem = cluster.map_shared_rank(smem, 1 - clusterBlockRank);
 
+  // get the value from the other block
   int value = other_block_smem[threadIdx.x];
 
   cluster.sync();

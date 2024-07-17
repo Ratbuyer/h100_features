@@ -1,60 +1,59 @@
-#include <cooperative_groups.h>
+// This code demonstrate on sm_90 GPU,
+// how to create a cluster of thread blocks
+// and how blocks in a cluster can interact
+// using distributed shared memory.
 
-// Distributed Shared memory histogram kernel
-__global__ void kernel(int *bins, const int nbins, const int bins_per_block, const int *__restrict__ input,
-                                   size_t array_size)
+#include <cooperative_groups.h>
+#include <stdio.h>
+
+__global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
 {
-  extern __shared__ int smem[];
+  // printf("blockIdx.x: %d, threadIdx.x: %d\n", blockIdx.x, threadIdx.x);
+
+  __shared__ int smem[32];
   namespace cg = cooperative_groups;
+
+  // tid is the thread index within the cluster, not block.
   int tid = cg::this_grid().thread_rank();
 
-  // Cluster initialization, size and calculating local bin offsets.
   cg::cluster_group cluster = cg::this_cluster();
   unsigned int clusterBlockRank = cluster.block_rank();
   int cluster_size = cluster.dim_blocks().x;
-
-  for (int i = threadIdx.x; i < bins_per_block; i += blockDim.x)
-  {
-    smem[i] = 0; //Initialize shared memory histogram to zeros
+  
+  // cluster size = nubmer of blocks in the cluster
+  if (tid == 0) {
+    printf("cluster_size: %d\n", cluster_size);
   }
+  
+  // initialize shared memory, block 1 has one value higher than block 0
+  smem[threadIdx.x] = blockIdx.x + threadIdx.x;
 
-  // cluster synchronization ensures that shared memory is initialized to zero in
-  // all thread blocks in the cluster. It also ensures that all thread blocks
-  // have started executing and they exist concurrently.
   cluster.sync();
 
-  for (int i = tid; i < array_size; i += blockDim.x * gridDim.x)
-  {
-    int ldata = input[i];
+  // get the shared memory of the other block
+  int *other_block_smem = cluster.map_shared_rank(smem, 1 - clusterBlockRank);
 
-    //Find the right histogram bin.
-    int binid = ldata;
-    if (ldata < 0)
-      binid = 0;
-    else if (ldata >= nbins)
-      binid = nbins - 1;
+  // get the value from the other block
+  int value = other_block_smem[threadIdx.x];
 
-    //Find destination block rank and offset for computing
-    //distributed shared memory histogram
-    int dst_block_rank = (int)(binid / bins_per_block);
-    int dst_offset = binid % bins_per_block;
-
-    //Pointer to target block shared memory
-    int *dst_smem = cluster.map_shared_rank(smem, dst_block_rank);
-
-    //Perform atomic update of the histogram bin
-    atomicAdd(dst_smem + dst_offset, 1);
-  }
-
-  // cluster synchronization is required to ensure all distributed shared
-  // memory operations are completed and no thread block exits while
-  // other thread blocks are still accessing distributed shared memory
   cluster.sync();
 
-  // Perform global memory histogram, using the local distributed memory histogram
-  int *lbins = bins + cluster.block_rank() * bins_per_block;
-  for (int i = threadIdx.x; i < bins_per_block; i += blockDim.x)
+  // print the value
+  printf("blockIdx.x: %d, threadIdx.x: %d, value: %d\n", blockIdx.x, threadIdx.x, value);
+}
+
+int main()
+{
+
+  // two blocks in a cluster
+  cluster_kernel<<<2, 32>>>();
+
+  cudaDeviceSynchronize();
+
+  // check for kernel errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
   {
-    atomicAdd(&lbins[i], smem[i]);
+    printf("CUDA error: %s\n", cudaGetErrorString(err));
   }
 }

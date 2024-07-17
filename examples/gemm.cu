@@ -1,6 +1,5 @@
 // This code combines the features on H100 to do gemm.
 
-
 #include <stdio.h>
 #include <cuda.h>
 #include <mma.h>
@@ -90,6 +89,9 @@ __global__ void gemm(half *A, half *B, half *C)
       A_shared[offset] = A[(block_id_m * M2 + i) * K + k_step * K2 + j];
     }
 
+    __threadfence();
+    __syncthreads();
+
     {
       int i = tid / 8;
       int j = tid % 8;
@@ -103,6 +105,7 @@ __global__ void gemm(half *A, half *B, half *C)
       B_shared[offset] = B[(k_step * K2 + i) * N + block_id_n * N2 + j];
     }
 
+    __threadfence();
     __syncthreads();
 
     warpgroup_fence_operand(c[0]);
@@ -125,9 +128,10 @@ __global__ void gemm(half *A, half *B, half *C)
 
     warpgroup_fence_operand(c[0]);
     warpgroup_fence_operand(c[1]);
-  }
 
-  __syncthreads();
+    __threadfence();
+    __syncthreads();
+  }
 
   // store back to c
   uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
