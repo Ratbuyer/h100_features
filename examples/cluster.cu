@@ -40,7 +40,7 @@ __global__ void kernel(int *bins, const int nbins, const int bins_per_block, con
     int dst_offset = binid % bins_per_block;
 
     //Pointer to target block shared memory
-    int *dst_smem = cluster.map_shared_rank(smem, dst_block_rank);
+    int *dst_smem = cluster.map_shared_rank(smem, 0);
 
     //Perform atomic update of the histogram bin
     atomicAdd(dst_smem + dst_offset, 1);
