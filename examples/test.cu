@@ -17,9 +17,11 @@ __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
 
   cluster.sync();
 
-  int *other_block_smem = cluster.map_shared_rank(smem, 1 - clusterBlockRank);
+  int *other_block_smem = cluster.map_shared_rank(smem, 0);
 
   int value = other_block_smem[tid];
+
+  cluster.sync();
 
   // print the value
   printf("blockIdx.x: %d, threadIdx.x: %d, value: %d\n", blockIdx.x, threadIdx.x, value);
