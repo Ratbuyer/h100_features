@@ -9,17 +9,21 @@ __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
   namespace cg = cooperative_groups;
 
   // tid is the thread index within the cluster, not block.
-  // int tid = cg::this_grid().thread_rank();
+  int tid = cg::this_grid().thread_rank();
 
   cg::cluster_group cluster = cg::this_cluster();
   unsigned int clusterBlockRank = cluster.block_rank();
   int cluster_size = cluster.dim_blocks().x;
 
+  if (tid == 0) {
+    printf("cluster_size: %d\n", cluster_size);
+  }
+
   smem[threadIdx.x] = blockIdx.x + threadIdx.x;
 
   cluster.sync();
 
-  int *other_block_smem = cluster.map_shared_rank(smem, 0);
+  int *other_block_smem = cluster.map_shared_rank(smem, 1 - clusterBlockRank);
 
   int value = other_block_smem[threadIdx.x];
 
