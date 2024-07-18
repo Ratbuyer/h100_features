@@ -46,7 +46,7 @@ __global__ void gemm(half *A, half *B, half *C,
 
   uint32_t c[2] = {0};
 
-  __align__(16) __shared__ half A_buffer[M2 * K2];
+  __align__(128) __shared__ half A_buffer[M2 * K2];
   // __align__(16) __shared__ half B_buffer[K2 * N2];
 
   __align__(16) __shared__ half A_shared[M2 * K2];
@@ -134,6 +134,17 @@ __global__ void gemm(half *A, half *B, half *C,
 
     __threadfence();
     __syncthreads();
+
+    if (tid == 0)
+    {
+      for (int i = 0; i < M2 * K2; i++)
+      {
+        if (A_shared[i] != (half)1)
+        {
+          printf("A_shared[%d] = %f\n", i, __half2float(A_shared[i]));
+        }
+      }
+    }
 
     {
       int i = tid / 8;
@@ -260,9 +271,9 @@ int main()
 
   // print_matrix(h_C, M, N);
 
-  CPU_gemm(h_A, h_B, h_CPU, M, N, K);
+  // CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  compare_matrices(h_C, h_CPU, M, N);
+  // compare_matrices(h_C, h_CPU, M, N);
 
   return 0;
 }
