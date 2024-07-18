@@ -233,9 +233,9 @@ int main()
   // both A and B are matrices (2d)
   const int rank = 2;
 
-  uint64_t size[rank] = {K, M};
+  uint64_t size[rank] = {M, K};
   uint64_t stride[rank - 1] = {K * sizeof(half)};
-  uint32_t box_size[rank] = {K2, M2};
+  uint32_t box_size[rank] = {M2, K2};
   uint32_t elem_stride[rank] = {1, 1};
 
   CUresult res = cuTensorMapEncodeTiled(
