@@ -196,8 +196,8 @@ int main()
   assert(K % K2 == 0);
 
   half *d_C;
-  half h_C[M * N];
-  half h_CPU[M * N];
+  half h_C[M * N]{};
+  half h_CPU[M * N]{};
   half h_A[M * K];
   half h_B[K * N];
 
@@ -259,9 +259,7 @@ int main()
     printf("CUDA error: %s\n", cudaGetErrorString(err));
   }
 
-  memset(h_C, 0, M * N * sizeof(half));
-
-  // cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 
   // print_matrix(h_C, M, N);
 
