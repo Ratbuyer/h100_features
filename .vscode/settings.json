@@ -6,6 +6,8 @@
     "barrier": "cpp",
     "__config": "cpp",
     "__target_macros": "cpp",
-    "atomic": "cpp"
+    "atomic": "cpp",
+    "utility": "cpp",
+    "__verbose_abort": "cpp"
   }
 }
