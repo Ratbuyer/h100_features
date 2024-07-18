@@ -265,7 +265,7 @@ int main()
 
   CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  compare_matrices(h_C, h_CPU, M, N);
+  compare_matrices(h_CPU, h_C, M, N);
 
   return 0;
 }
