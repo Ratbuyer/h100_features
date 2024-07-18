@@ -226,7 +226,7 @@ int main()
   const int rank = 2;
 
   uint64_t size[rank] = {M, K};
-  uint64_t stride[rank - 1] = {K * sizeof(half)};
+  uint64_t stride[rank - 1] = {M * sizeof(half)};
   uint32_t box_size[rank] = {M2, K2};
   uint32_t elem_stride[rank] = {1, 1};
 
