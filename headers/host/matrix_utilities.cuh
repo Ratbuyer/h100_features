@@ -97,7 +97,7 @@ void CPU_gemm(half *A, half *B, half *C, int M, int N, int K)
 void compare_matrices(half *A, half *B, int rows, int cols)
 {
   float total_diff = 0.0;
-  int total_value = 0;
+  int total_elements = rows * cols;
 
   for (int i = 0; i < rows; i++)
   {
@@ -106,11 +106,10 @@ void compare_matrices(half *A, half *B, int rows, int cols)
       float a = __half2float(A[i * cols + j]);
       float b = __half2float(B[i * cols + j]);
       total_diff += fabs((a - b) / a);
-      total_value += a / 2;
     }
   }
 
-  float percentage_diff = (total_diff / total_value) * 100;
+  float percentage_diff = (total_diff / total_elements) * 100;
   printf("Total error: %.2f%%\n", percentage_diff);
 }
 
