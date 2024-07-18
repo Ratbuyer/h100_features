@@ -7,7 +7,7 @@ OUTPUT=bins/bin
 
 
 all:
-	make tma_2d
+	make gemm
 	make run
 
 test:

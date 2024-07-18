@@ -113,6 +113,7 @@ __global__ void gemm(half *A, half *B, half *C,
 
     bar.wait(cuda::std::move(token));
 
+    __threadfence();
     __syncthreads();
 
     for (int index = tid * 8; index < (tid + 1) * 8 && index < 64 * 16; index++)
@@ -201,7 +202,7 @@ int main()
   // half h_A_reordered[M * K];
   half h_B[K * N];
 
-  fill_random(h_A, M, K);
+  fill_fixed(h_A, M, K, 1);
   fill_random(h_B, K, N);
 
   half *d_A = nullptr;
