@@ -259,7 +259,7 @@ int main()
     printf("CUDA error: %s\n", cudaGetErrorString(err));
   }
 
-  // cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 
   // print_matrix(h_C, M, N);
 
