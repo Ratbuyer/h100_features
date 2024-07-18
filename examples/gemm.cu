@@ -55,15 +55,6 @@ __global__ void gemm(half *A, half *B, half *C,
   GmmaDescriptor desc_a = make_desc_a(A_shared);
   GmmaDescriptor desc_b = make_desc_b(B_shared);
 
-  // async operations initialization
-  __shared__ barrier bar;
-
-  if (threadIdx.x == 0)
-  {
-    init(&bar, blockDim.x);
-  }
-  __syncthreads();
-
   for (int k_step = 0; k_step < K / K2; k_step++)
   {
 
@@ -97,6 +88,15 @@ __global__ void gemm(half *A, half *B, half *C,
     //     }
     //   }
     // }
+
+    __shared__ barrier bar;
+
+    if (threadIdx.x == 0)
+    {
+      init(&bar, blockDim.x);
+    }
+    __threadfence();
+    __syncthreads();
 
     // load a using tma
     uint64_t token;
