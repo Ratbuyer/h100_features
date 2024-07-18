@@ -39,7 +39,8 @@ void print_matrix(half *matrix, int rows, int cols)
   printf("\n");
 }
 
-void print_matrix(int *matrix, int rows, int cols) {
+void print_matrix(int *matrix, int rows, int cols)
+{
   for (int i = 0; i < rows; i++)
   {
     for (int j = 0; j < cols; j++)
@@ -49,7 +50,6 @@ void print_matrix(int *matrix, int rows, int cols) {
     printf("\n");
   }
   printf("\n");
-
 }
 
 void fill_random(half *matrix, int rows, int cols)
@@ -105,12 +105,6 @@ void compare_matrices(half *A, half *B, int rows, int cols)
     {
       float a = __half2float(A[i * cols + j]);
       float b = __half2float(B[i * cols + j]);
-      float error_range = 0.05;
-      bool is_same = a - error_range < b && a + error_range > b;
-      if (!is_same || i * rows + j < 10)
-      {
-        printf("Error at (%d, %d) : %f != %f\n", i, j, a, b);
-      }
       total_diff += fabs((a - b) / a);
     }
   }
@@ -119,6 +113,22 @@ void compare_matrices(half *A, half *B, int rows, int cols)
   printf("Total percentage difference: %.2f%%\n", percentage_diff);
 }
 
+void print_differnce(half *A, half *B, int rows, int cols, float error_range)
+{
+  for (int i = 0; i < rows; i++)
+  {
+    for (int j = 0; j < cols; j++)
+    {
+      float a = __half2float(A[i * cols + j]);
+      float b = __half2float(B[i * cols + j]);
+      bool is_same = a - error_range < b && a + error_range > b;
+      if (!is_same)
+      {
+        printf("Error at (%d, %d) : %f != %f\n", i, j, a, b);
+      }
+    }
+  }
+}
 
 void compress24(half *dense, half *sparse, int rows, int cols)
 {
