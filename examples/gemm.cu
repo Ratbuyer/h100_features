@@ -228,7 +228,7 @@ int main()
 
   CUresult res = cuTensorMapEncodeTiled(
       &A_tensor_descriptor, // CUtensorMap *tensorMap,
-      CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_INT32,
+      CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_FLOAT16,
       rank,        // cuuint32_t tensorRank,
       d_A,         // void *globalAddress,
       size,        // const cuuint64_t *globalDim,
