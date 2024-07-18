@@ -201,10 +201,10 @@ int main()
   half h_A[M * K];
   half h_B[K * N];
 
-  // fill_fixed(h_A, M, K, 1);
+  fill_fixed(h_A, M, K, 1);
   // fill_fixed(h_B, K, N, 1);
 
-  fill_random(h_A, M, K);
+  // fill_random(h_A, M, K);
   fill_random(h_B, K, N);
 
   half *d_A = nullptr;
