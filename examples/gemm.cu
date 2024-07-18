@@ -139,7 +139,7 @@ __global__ void gemm(half *A, half *B, half *C,
     {
       for (int i = 0; i < M2 * K2; i++)
       {
-        if (A_shared[i] != (half)1)
+        if (A_shared[i] == (half)1)
         {
           printf("A_shared[%d] = %f\n", i, __half2float(A_shared[i]));
         }
