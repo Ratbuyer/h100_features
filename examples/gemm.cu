@@ -204,7 +204,8 @@ int main()
   fill_random(h_A, M, K);
   fill_random(h_B, K, N);
 
-  half *d_A, *d_B;
+  half *d_A = nullptr;
+  half *d_B = nullptr;
 
   cudaMalloc((void **)&d_A, M * K * sizeof(half));
   cudaMalloc((void **)&d_B, K * N * sizeof(half));
@@ -223,7 +224,7 @@ int main()
 
   uint64_t size[rank] = {K, M};
   uint64_t stride[rank - 1] = {K * sizeof(half)};
-  uint32_t box_size[rank] = {K, M};
+  uint32_t box_size[rank] = {K2, M2};
   uint32_t elem_stride[rank] = {1, 1};
 
   CUresult res = cuTensorMapEncodeTiled(
