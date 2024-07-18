@@ -135,16 +135,16 @@ __global__ void gemm(half *A, half *B, half *C,
     __threadfence();
     __syncthreads();
 
-    if (tid == 0)
-    {
-      for (int i = 0; i < M2 * K2; i++)
-      {
-        if (A_buffer[i] != (half)1)
-        {
-          printf("A_shared[%d] = %f\n", i, __half2float(A_shared[i]));
-        }
-      }
-    }
+    // if (tid == 0)
+    // {
+    //   for (int i = 0; i < M2 * K2; i++)
+    //   {
+    //     if (A_buffer[i] != (half)1)
+    //     {
+    //       printf("A_shared[%d] = %f\n", i, __half2float(A_shared[i]));
+    //     }
+    //   }
+    // }
 
     {
       int i = tid / 8;
@@ -269,11 +269,11 @@ int main()
 
   cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 
-  // print_matrix(h_C, M, N);
+  print_matrix(h_C, M, N);
 
-  // CPU_gemm(h_A, h_B, h_CPU, M, N, K);
+  CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  // compare_matrices(h_C, h_CPU, M, N);
+  compare_matrices(h_C, h_CPU, M, N);
 
   return 0;
 }
