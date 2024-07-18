@@ -199,11 +199,10 @@ int main()
   half h_C[M * N];
   half h_CPU[M * N];
   half h_A[M * K];
-  // half h_A_reordered[M * K];
   half h_B[K * N];
 
   fill_fixed(h_A, M, K, 1);
-  fill_random(h_B, K, N);
+  fill_fixed(h_B, K, N, 1);
 
   half *d_A = nullptr;
   half *d_B = nullptr;
