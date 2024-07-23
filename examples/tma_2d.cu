@@ -96,7 +96,7 @@ int main()
 
   // launch kernel, select a tile coordinate
   int coordinate_m = 0;
-  int coordinate_k = 0;
+  int coordinate_k = 16;
   test<<<1, 128>>>(tensor_map, coordinate_m, coordinate_k);
 
   cudaDeviceSynchronize();
