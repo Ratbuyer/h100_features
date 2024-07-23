@@ -75,6 +75,19 @@ void fill_fixed(half *matrix, int rows, int cols, float value)
   }
 }
 
+// element in each subtile has the same value,
+// which is their tile number in row major order
+void fill_tilewise(int *matrix, int rows, int cols, int tile_size_row, int tile_size_col)
+{
+  for (int i = 0; i < rows; i++)
+  {
+    for (int j = 0; j < cols; j++)
+    {
+      matrix[i * cols + j] = (i / tile_size_row) * (cols / tile_size_col) + j / tile_size_col;
+    }
+  }
+}
+
 void CPU_gemm(half *A, half *B, half *C, int M, int N, int K)
 {
   for (int i = 0; i < M; i++)

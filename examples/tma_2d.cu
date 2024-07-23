@@ -80,12 +80,11 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
 
 int main()
 {
-  // set host matrix to 1
+  // fill the host matrix
   int host_tensor[gmem_len];
-  for (int i = 0; i < gmem_len; i++)
-  {
-    host_tensor[i] = 1;
-  }
+  fill_tilewise(host_tensor, M, K, m, k);
+
+  print_matrix(host_tensor, M, K);
 
   // copy host matrix to device
   int *tensor_ptr = nullptr;
