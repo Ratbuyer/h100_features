@@ -8,20 +8,10 @@
 #include <random>
 #include <iostream>
 #include <cassert>
-#include <cuda/barrier>
-#include <cudaTypedefs.h>
 
-#include "descriptor.cuh"
-#include "matrix_utilities.cuh"
-#include "wgmma.cuh"
-#include "tma_tensor_map.cuh"
-#include "test_macros.cuh"
-
-// Suppress warning about barrier in shared memory
-TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
-
-using barrier = cuda::barrier<cuda::thread_scope_block>;
-namespace cde = cuda::device::experimental;
+#include "../headers/device/descriptor.cuh"
+#include "../headers/host/matrix_utilities.cuh"
+#include "../headers/device/wgmma.cuh"
 
 const int M = 512;
 const int N = 512;
@@ -31,8 +21,7 @@ const int M2 = 64;
 const int N2 = 8;
 const int K2 = 16;
 
-__global__ void gemm(half *A, half *B, half *C,
-                     const __grid_constant__ CUtensorMap A_tensor_map)
+__global__ void gemm(half *A, half *B, half *C)
 {
   const int tid = threadIdx.x;
   const int warp_id = tid / 32;
@@ -45,9 +34,6 @@ __global__ void gemm(half *A, half *B, half *C,
   const int block_id_n = block_id % (N / N2);
 
   uint32_t c[2] = {0};
-
-  __align__(128) __shared__ half A_buffer[M2 * K2];
-  // __align__(16) __shared__ half B_buffer[K2 * N2];
 
   __align__(16) __shared__ half A_shared[M2 * K2];
   __align__(16) __shared__ half B_shared[K2 * N2];
@@ -89,33 +75,6 @@ __global__ void gemm(half *A, half *B, half *C,
     //   }
     // }
 
-    __shared__ barrier bar;
-
-    if (threadIdx.x == 0)
-    {
-      init(&bar, blockDim.x);
-    }
-    __threadfence();
-    __syncthreads();
-
-    // load a using tma
-    uint64_t token;
-    if (threadIdx.x == 0)
-    {
-      // Fastest moving coordinate first.
-      cde::cp_async_bulk_tensor_2d_global_to_shared(A_buffer, &A_tensor_map, block_id_m * M2, k_step * K2, bar);
-      token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(A_buffer));
-    }
-    else
-    {
-      token = bar.arrive();
-    }
-
-    bar.wait(cuda::std::move(token));
-
-    __threadfence();
-    __syncthreads();
-
     for (int index = tid * 8; index < (tid + 1) * 8 && index < 64 * 16; index++)
     {
       int i = index / 16;
@@ -127,10 +86,8 @@ __global__ void gemm(half *A, half *B, half *C,
       int block_col = j % 8;
       int block_id = block_x * 2 + block_y;
       int offset = block_id * 64 + block_row * 8 + block_col;
-      A_shared[offset] = A_buffer[i * K2 + j];
+      A_shared[offset] = A[(block_id_m * M2 + i) * K + k_step * K2 + j];
     }
-
-    cde::fence_proxy_async_shared_cta();
 
     __threadfence();
     __syncthreads();
@@ -196,19 +153,16 @@ int main()
   assert(K % K2 == 0);
 
   half *d_C;
-  half h_C[M * N]{};
-  half h_CPU[M * N]{};
+  half h_C[M * N];
+  half h_CPU[M * N];
   half h_A[M * K];
+  // half h_A_reordered[M * K];
   half h_B[K * N];
-
-  // fill_fixed(h_A, M, K, 1);
-  // fill_fixed(h_B, K, N, 1);
 
   fill_random(h_A, M, K);
   fill_random(h_B, K, N);
 
-  half *d_A = nullptr;
-  half *d_B = nullptr;
+  half *d_A, *d_B;
 
   cudaMalloc((void **)&d_A, M * K * sizeof(half));
   cudaMalloc((void **)&d_B, K * N * sizeof(half));
@@ -217,39 +171,10 @@ int main()
   cudaMemcpy(d_A, h_A, M * K * sizeof(half), cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
-  // initalize tensor map for tma
-  auto cuTensorMapEncodeTiled = get_cuTensorMapEncodeTiled();
-
-  CUtensorMap A_tensor_descriptor{};
-
-  // both A and B are matrices (2d)
-  const int rank = 2;
-
-  uint64_t size[rank] = {M, K};
-  uint64_t stride[rank - 1] = {K * sizeof(half)};
-  uint32_t box_size[rank] = {M2, K2};
-  uint32_t elem_stride[rank] = {1, 1};
-
-  CUresult res = cuTensorMapEncodeTiled(
-      &A_tensor_descriptor, // CUtensorMap *tensorMap,
-      CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_FLOAT16,
-      rank,        // cuuint32_t tensorRank,
-      d_A,         // void *globalAddress,
-      size,        // const cuuint64_t *globalDim,
-      stride,      // const cuuint64_t *globalStrides,
-      box_size,    // const cuuint32_t *boxDim,
-      elem_stride, // const cuuint32_t *elementStrides,
-      CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
-      CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
-      CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
-      CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
-
-  assert(res == CUDA_SUCCESS && "tensormap creation failed.");
-
   const int threads_per_block = 32 * 4; // 4 warps
   const int blocks = (M / M2) * (N / N2);
 
-  gemm<<<blocks, threads_per_block>>>(d_A, d_B, d_C, A_tensor_descriptor);
+  gemm<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
   cudaDeviceSynchronize();
 
@@ -265,7 +190,9 @@ int main()
 
   CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  compare_matrices(h_CPU, h_C, M, N);
+  compare_matrices(h_C, h_CPU, M, N);
+
+  print_differnce(h_C, h_CPU, M, N, 0.05);
 
   return 0;
 }
