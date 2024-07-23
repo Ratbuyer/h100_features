@@ -48,7 +48,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
     // just to demonstrate prefetch
     // copy_async_2d_prefetch(global_fake_tensor_map, base_j, base_i);
     // call the loading api
-    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, x, y, bar);
+    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, y, x, bar);
     token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
   }
   else
@@ -72,7 +72,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
   // Write back to global memory:
   if (threadIdx.x == 0)
   {
-    cde::cp_async_bulk_tensor_2d_shared_to_global(&global_fake_tensor_map, x, y, smem_buffer);
+    cde::cp_async_bulk_tensor_2d_shared_to_global(&global_fake_tensor_map, y, x, smem_buffer);
     cde::cp_async_bulk_commit_group();
     cde::cp_async_bulk_wait_group_read<0>();
   }
