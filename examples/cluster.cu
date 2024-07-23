@@ -6,6 +6,8 @@
 #include <cooperative_groups.h>
 #include <stdio.h>
 
+#include "kernel.cuh"
+
 __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
 {
   // printf("blockIdx.x: %d, threadIdx.x: %d\n", blockIdx.x, threadIdx.x);
@@ -48,12 +50,5 @@ int main()
   // two blocks in a cluster
   cluster_kernel<<<2, 32>>>();
 
-  cudaDeviceSynchronize();
-
-  // check for kernel errors
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+  cuda_check_error();
 }

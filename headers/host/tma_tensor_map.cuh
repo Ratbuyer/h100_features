@@ -1,3 +1,5 @@
+// apis for host code to initailize tensor map for tma apis
+
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
 #include <assert.h>
 

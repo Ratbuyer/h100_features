@@ -10,6 +10,7 @@
 
 #include "descriptor.cuh"
 #include "matrix_utilities.cuh"
+#include "kernel.cuh"
 
 const int M = 64;
 const int N = 8;
@@ -33,7 +34,8 @@ __global__ void work(half *A, half *B, half *C)
   __align__(16) __shared__ half B_shared[K * N];
 
   // 8x8 core blocks
-  if (tid == 0) {
+  if (tid == 0)
+  {
 
     for (int i = 0; i < M; i++)
     {
@@ -77,25 +79,23 @@ __global__ void work(half *A, half *B, half *C)
   // wgmma.mma_async.sync.aligned.shape.dtype.f16.f16  d, a, b-desc, scale-d, imm-scale-a, imme-scale-b, imm-trans-b;
   asm volatile("wgmma.mma_async.sync.aligned.m64n8k16.f16.f16.f16 "
                "{%0, %1}, "
-                "%2, %3, "
-                "1, "
-                "1, 1, "
-                "0, 1;"
+               "%2, %3, "
+               "1, "
+               "1, 1, "
+               "0, 1;"
                : "+r"(c[0]), "+r"(c[1])
-               : "l"(desc_a), "l"(desc_b)
-               );
+               : "l"(desc_a), "l"(desc_b));
 
   asm volatile("wgmma.commit_group.sync.aligned; \n");
 
   asm volatile("wgmma.mma_async.sync.aligned.m64n8k16.f16.f16.f16 "
                "{%0, %1}, "
-                "%2, %3, "
-                "1, "
-                "1, 1, "
-                "0, 1;"
+               "%2, %3, "
+               "1, "
+               "1, 1, "
+               "0, 1;"
                : "+r"(c[0]), "+r"(c[1])
-               : "l"(desc_a), "l"(desc_b)
-               );
+               : "l"(desc_a), "l"(desc_b));
 
   asm volatile("wgmma.commit_group.sync.aligned; \n");
 
@@ -111,7 +111,7 @@ __global__ void work(half *A, half *B, half *C)
   //   printf("%f\n", __half2float(reg_ptr[0]));
   // }
 
-  uint32_t * C_ptr = reinterpret_cast<uint32_t *>(C);
+  uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
 
   int offset1 = warp_id * 16 * 4 + group_id * 4 + lane_in_group;
   int offset2 = warp_id * 16 * 4 + (group_id + 8) * 4 + lane_in_group;
@@ -154,13 +154,7 @@ int main()
 
   work<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
-  cudaDeviceSynchronize();
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+  cuda_check_error();
 
   cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 

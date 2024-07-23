@@ -8,10 +8,11 @@
 #include <random>
 #include <iostream>
 
-#include "../headers/device/descriptor.cuh"
-#include "../headers/host/matrix_utilities.cuh"
-#include "../headers/device/wgmma.cuh"
-#include "../headers/device/wgmma.sp.cuh"
+#include "descriptor.cuh"
+#include "matrix_utilities.cuh"
+#include "wgmma.cuh"
+#include "wgmma.sp.cuh"
+#include "kernel.cuh"
 
 const int M = 64;
 const int N = 8;
@@ -143,13 +144,7 @@ int main()
 
   work<<<blocks, threads_per_block>>>(d_A, d_B, d_C, d_metadata);
 
-  cudaDeviceSynchronize();
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+  cuda_check_error();
 
   cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 

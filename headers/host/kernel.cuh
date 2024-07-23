@@ -13,7 +13,6 @@ void cuda_check_error()
 
 class cuda_timer
 {
-
 private:
   cudaEvent_t start, stop;
 

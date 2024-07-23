@@ -9,9 +9,10 @@
 #include <iostream>
 #include <cassert>
 
-#include "../headers/device/descriptor.cuh"
-#include "../headers/host/matrix_utilities.cuh"
-#include "../headers/device/wgmma.cuh"
+#include "descriptor.cuh"
+#include "matrix_utilities.cuh"
+#include "wgmma.cuh"
+#include "kernel.cuh"
 
 const int M = 512;
 const int N = 512;
@@ -176,13 +177,7 @@ int main()
 
   gemm<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
-  cudaDeviceSynchronize();
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+  cuda_check_error();
 
   cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 

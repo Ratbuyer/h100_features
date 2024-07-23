@@ -15,6 +15,7 @@
 #include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
 #include "tma.cuh"
+#include "kernel.cuh"
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
@@ -103,14 +104,7 @@ int main()
   int coordinate_k = 24;
   test<<<1, 128>>>(tensor_map, coordinate_k, coordinate_m);
 
-  cudaDeviceSynchronize();
-
-  // check for kernel errors
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+  cuda_check_error();
 
   // copy device matrix to host
   int host_gmem_tensor[gmem_len];
