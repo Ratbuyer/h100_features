@@ -97,8 +97,8 @@ int main()
   CUtensorMap tensor_map = create_2d_tensor_map(M, K, m, k, tensor_ptr);
 
   // launch kernel, select a tile coordinate
-  int tile_i = 16;
-  int tile_j = 0;
+  int tile_i = 8;
+  int tile_j = 16;
   test<<<1, 128>>>(tensor_map, tile_i, tile_j);
 
   cudaDeviceSynchronize();
