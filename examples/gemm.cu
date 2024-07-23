@@ -103,7 +103,7 @@ __global__ void gemm(half *A, half *B, half *C,
     if (threadIdx.x == 0)
     {
       // Fastest moving coordinate first.
-      cde::cp_async_bulk_tensor_2d_global_to_shared(A_buffer, &A_tensor_map, block_id_m * M2, k_step * K2, bar);
+      cde::cp_async_bulk_tensor_2d_global_to_shared(A_buffer, &A_tensor_map, k_step * K2, block_id_m * M2, bar);
       token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(A_buffer));
     }
     else
@@ -227,7 +227,7 @@ int main()
 
   uint64_t size[rank] = {M, K};
   uint64_t stride[rank - 1] = {K * sizeof(half)};
-  uint32_t box_size[rank] = {M2, K2};
+  uint32_t box_size[rank] = {K2, M2};
   uint32_t elem_stride[rank] = {1, 1};
 
   CUresult res = cuTensorMapEncodeTiled(

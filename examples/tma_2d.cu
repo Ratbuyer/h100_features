@@ -4,6 +4,8 @@
 // tile back to global memory. We print the result matrix to prove the
 // changes are done
 
+// note very carefully the order of the m and k coordinate in the api calls
+
 #include <cuda/barrier>
 #include <stdio.h>
 #include <cuda.h>
