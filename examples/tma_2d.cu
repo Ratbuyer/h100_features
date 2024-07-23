@@ -5,6 +5,7 @@
 // changes are done
 
 // note very carefully the order of the m and k coordinate in the api calls
+// and note the alignment requirement of the coordinatess
 
 #include <cuda/barrier>
 #include <stdio.h>
@@ -30,7 +31,7 @@ constexpr int k = 8;  // subtile columns
 
 static constexpr int buf_len = k * m;
 
-__global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map, int x, int y)
+__global__ void test(const __grid_constant__ CUtensorMap tensor_map, int x, int y)
 {
   __shared__ alignas(128) int smem_buffer[buf_len];
   __shared__ barrier bar;
@@ -46,9 +47,9 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
   if (threadIdx.x == 0)
   {
     // just to demonstrate prefetch
-    // copy_async_2d_prefetch(global_fake_tensor_map, base_j, base_i);
+    copy_async_2d_prefetch(&tensor_map, x, y);
     // call the loading api
-    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, x, y, bar);
+    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &tensor_map, x, y, bar);
     token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
   }
   else
@@ -72,7 +73,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
   // Write back to global memory:
   if (threadIdx.x == 0)
   {
-    cde::cp_async_bulk_tensor_2d_shared_to_global(&global_fake_tensor_map, x, y, smem_buffer);
+    cde::cp_async_bulk_tensor_2d_shared_to_global(&tensor_map, x, y, smem_buffer);
     cde::cp_async_bulk_commit_group();
     cde::cp_async_bulk_wait_group_read<0>();
   }
@@ -97,6 +98,7 @@ int main()
   CUtensorMap tensor_map = create_2d_tensor_map(M, K, m, k, tensor_ptr);
 
   // launch kernel, select a tile coordinate
+  // x (0 16 32 48) y (0 8 16 24) must be aligned with m and k
   int coordinate_m = 48;
   int coordinate_k = 24;
   test<<<1, 128>>>(tensor_map, coordinate_k, coordinate_m);

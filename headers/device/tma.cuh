@@ -38,13 +38,13 @@ __device__ void copy_async_1d_prefetch(u_int64_t desc, int coordinate1)
 
 // 2d prefetch
 // src align to 16, size multiple of 16
-__device__ void copy_async_2d_prefetch(void const *desc, int coordinate1, int coordinate2)
+__device__ void copy_async_2d_prefetch(const CUtensorMap *__tensor_map, int coordinate1, int coordinate2)
 {
   asm volatile(
       "cp.async.bulk.prefetch.tensor.2d.L2.global.tile"
       " [%0, {%1, %2}];"
       :
-      : "l"(desc),
+      : "l"(__tensor_map),
         "r"(coordinate1),
         "r"(coordinate2)
       : "memory");
