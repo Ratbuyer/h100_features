@@ -25,14 +25,14 @@ cp.async.bulk.prefetch.tensor.dim.L2.src{.load_mode}{.level::cache_hint} [tensor
 
 // 1d prefetch
 // src align to 16, size multiple of 16
-__device__ void copy_async_1d_prefetch(u_int64_t desc, int coordinate1)
+__device__ void copy_async_1d_prefetch(const CUtensorMap *__tensor_map, int coordinate)
 {
   asm volatile(
-      "cp.async.bulk.prefetch.tensor.1d.L2.global.tile"
+      "cp.async.bulk.prefetch.tensor.dim.L2.src.global.tile"
       " [%0, {%1}];"
       :
-      : "l"(desc),
-        "r"(coordinate1)
+      : "l"(__tensor_map),
+        "r"(coordinate)
       : "memory");
 }
 

@@ -36,7 +36,7 @@ __global__ void cuda_core_work(int *result)
   result[0] = sum;
 }
 
-// only wgmma work
+// only tensor core work(wgmma)
 __global__ void tensor_core_work(int *result)
 {
   const int M = 64;
@@ -74,7 +74,7 @@ __global__ void tensor_core_work(int *result)
   result[0] = c[0] + c[1];
 }
 
-// incorrect ordering
+// incorrect ordering, causing operations to be serial
 __global__ void overlap_v1(int *result)
 {
   const int M = 64;
@@ -123,7 +123,7 @@ __global__ void overlap_v1(int *result)
   result[0] += reinterpret_cast<int &>(sum);
 }
 
-// correct interleaving
+// correct interleaving, causing operations to be parallel
 __global__ void overlap_v2(int *result)
 {
   const int M = 64;
@@ -175,68 +175,42 @@ int main()
   int *d_result, h_result;
   cudaMalloc(&d_result, sizeof(int));
 
+  // print cuda core work time
   cuda_timer timer;
-
   timer.start_timer();
-
   cuda_core_work<<<blocks, threads_per_block>>>(d_result);
-
   timer.stop_timer();
-
   cuda_check_error();
-
   printf("Cuda core time: %f\n", timer.get_time());
-
   cudaMemcpy(&h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
-
   printf("Result: %d\n", h_result);
 
-  // tensor core work
-
+  // tensor core work time
   timer.start_timer();
-
   tensor_core_work<<<blocks, threads_per_block>>>(d_result);
-
   timer.stop_timer();
-
   cuda_check_error();
-
   printf("Tensor core time: %f\n", timer.get_time());
-
   cudaMemcpy(&h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
-
   printf("Result: %d\n", h_result);
 
-  // overlap 1
-
+  // overlap 1 time
   timer.start_timer();
-
   overlap_v1<<<blocks, threads_per_block>>>(d_result);
-
   timer.stop_timer();
-
   cuda_check_error();
-
   printf("Overlap time v1: %f\n", timer.get_time());
-
   cudaMemcpy(&h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
-
   printf("Result: %d\n", h_result);
 
-  // overlap 2
-
+  // overlap 2 time
+  // faster than 1 because of correct interleaving
   timer.start_timer();
-
   overlap_v2<<<blocks, threads_per_block>>>(d_result);
-
   timer.stop_timer();
-
   cuda_check_error();
-
   printf("Overlap time v2: %f\n", timer.get_time());
-
   cudaMemcpy(&h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
-
   printf("Result: %d\n", h_result);
 
   return 0;

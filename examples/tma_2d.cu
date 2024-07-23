@@ -46,7 +46,7 @@ __global__ void test(const __grid_constant__ CUtensorMap tensor_map, int x, int 
   uint64_t token;
   if (threadIdx.x == 0)
   {
-    // just to demonstrate prefetch
+    // just to demonstrate using prefetch, completely unnecessary here
     copy_async_2d_prefetch(&tensor_map, x, y);
     // call the loading api
     cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &tensor_map, x, y, bar);
