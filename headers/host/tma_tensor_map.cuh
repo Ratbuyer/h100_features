@@ -13,7 +13,7 @@ PFN_cuTensorMapEncodeTiled get_cuTensorMapEncodeTiled()
 // create a 2d tensor map
 // for a matrix, row number is tensor_dim1, column number is tensor_dim2
 // assuming row major
-CUtensorMap create_2d_tensor_map(int tensor_dim1, int tensor_dim2, int tile_dim1, int tile_dim2, void *tensor_ptr)
+CUtensorMap create_2d_tensor_map(uint64_t tensor_dim1, uint64_t tensor_dim2, uint32_t tile_dim1, uint32_t tile_dim2, void *tensor_ptr)
 {
   // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
   CUtensorMap local_tensor_map{};

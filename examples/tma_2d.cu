@@ -20,14 +20,14 @@ TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
 
-constexpr size_t GMEM_WIDTH = 64;  // Width of tensor (in # elements)
-constexpr size_t GMEM_HEIGHT = 64; // Height of tensor (in # elements)
-constexpr size_t gmem_len = GMEM_WIDTH * GMEM_HEIGHT;
+constexpr size_t M = 64; // Width of tensor (in # elements)
+constexpr size_t K = 32; // Height of tensor (in # elements)
+constexpr size_t gmem_len = M * K;
 
-constexpr int SMEM_WIDTH = 16;  // Width of shared memory buffer (in # elements)
-constexpr int SMEM_HEIGHT = 16; // Height of shared memory buffer (in # elements)
+constexpr int m = 16; // Width of shared memory buffer (in # elements)
+constexpr int k = 16; // Height of shared memory buffer (in # elements)
 
-static constexpr int buf_len = SMEM_HEIGHT * SMEM_WIDTH;
+static constexpr int buf_len = k * m;
 
 __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map, int base_i, int base_j)
 {
@@ -62,7 +62,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
   // Update smem, change from 1 to 2
   for (int i = threadIdx.x; i < buf_len; i += blockDim.x)
   {
-    smem_buffer[i] = 2;
+    smem_buffer[i] += threadIdx.x;
   }
 
   cde::fence_proxy_async_shared_cta();
@@ -93,46 +93,12 @@ int main()
   cudaMalloc(&tensor_ptr, gmem_len * sizeof(int));
   cudaMemcpy(tensor_ptr, host_tensor, gmem_len * sizeof(int), cudaMemcpyHostToDevice);
 
-  // // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
-  // CUtensorMap local_tensor_map{};
-  // // rank is the number of dimensions of the array.
-  // constexpr uint32_t rank = 2;
-  // uint64_t size[rank] = {GMEM_WIDTH, GMEM_HEIGHT};
-  // // The stride is the number of bytes to traverse from the first element of one row to the next.
-  // // It must be a multiple of 16.
-  // uint64_t stride[rank - 1] = {GMEM_WIDTH * sizeof(int)};
-  // // The box_size is the size of the shared memory buffer that is used as the
-  // // destination of a TMA transfer.
-  // uint32_t box_size[rank] = {SMEM_WIDTH, SMEM_HEIGHT};
-  // // The distance between elements in units of sizeof(element). A stride of 2
-  // // can be used to load only the real component of a complex-valued tensor, for instance.
-  // uint32_t elem_stride[rank] = {1, 1};
-
-  // // Get a function pointer to the cuTensorMapEncodeTiled driver API.
-  // auto cuTensorMapEncodeTiled = get_cuTensorMapEncodeTiled();
-
-  // // Create the tensor descriptor.
-  // CUresult res = cuTensorMapEncodeTiled(
-  //     &local_tensor_map, // CUtensorMap *tensorMap,
-  //     CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_INT32,
-  //     rank,        // cuuint32_t tensorRank,
-  //     tensor_ptr,  // void *globalAddress,
-  //     size,        // const cuuint64_t *globalDim,
-  //     stride,      // const cuuint64_t *globalStrides,
-  //     box_size,    // const cuuint32_t *boxDim,
-  //     elem_stride, // const cuuint32_t *elementStrides,
-  //     CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
-  //     CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
-  //     CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
-  //     CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
-
-  // assert(res == CUDA_SUCCESS && "tensormap creation failed.");
-
-  CUtensorMap tensor_map = create_2d_tensor_map(GMEM_WIDTH, GMEM_HEIGHT, SMEM_WIDTH, SMEM_HEIGHT, tensor_ptr);
+  // create tensor map for the matrix
+  CUtensorMap tensor_map = create_2d_tensor_map(M, K, m, k, tensor_ptr);
 
   // launch kernel, select a tile coordinate
   int tile_i = 0;
-  int tile_j = 16;
+  int tile_j = 0;
   test<<<1, 128>>>(tensor_map, tile_i, tile_j);
 
   cudaDeviceSynchronize();
@@ -149,7 +115,7 @@ int main()
   cudaMemcpy(host_gmem_tensor, tensor_ptr, gmem_len * sizeof(int), cudaMemcpyDeviceToHost);
 
   // verify the results
-  print_matrix(host_gmem_tensor, GMEM_WIDTH, GMEM_HEIGHT);
+  print_matrix(host_gmem_tensor, M, K);
 
   return 0;
 }
