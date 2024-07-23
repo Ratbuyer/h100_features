@@ -5,7 +5,6 @@
 // changes are done
 
 #include <cuda/barrier>
-#include <cuda/std/utility> // cuda::std::move
 #include <stdio.h>
 #include <cuda.h>
 
@@ -20,12 +19,12 @@ TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
 
-constexpr size_t M = 64; // Width of tensor (in # elements)
-constexpr size_t K = 32; // Height of tensor (in # elements)
+constexpr size_t M = 64; // Number of rows of matrix
+constexpr size_t K = 32; // Number of columns of matrix
 constexpr size_t gmem_len = M * K;
 
-constexpr int m = 16; // Width of shared memory buffer (in # elements)
-constexpr int k = 8; // Height of shared memory buffer (in # elements)
+constexpr int m = 16; // subtile rows
+constexpr int k = 8;  // subtile columns
 
 static constexpr int buf_len = k * m;
 
@@ -47,7 +46,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
     // just to demonstrate prefetch
     // copy_async_2d_prefetch(global_fake_tensor_map, base_j, base_i);
     // call the loading api
-    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, base_j, base_i, bar);
+    cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, base_i, base_j, bar);
     token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
   }
   else
@@ -59,7 +58,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
 
   __syncthreads();
 
-  // Update smem, change from 1 to 2
+  // Update subtile, + 1
   for (int i = threadIdx.x; i < buf_len; i += blockDim.x)
   {
     smem_buffer[i] += 1;
@@ -97,9 +96,9 @@ int main()
   CUtensorMap tensor_map = create_2d_tensor_map(M, K, m, k, tensor_ptr);
 
   // launch kernel, select a tile coordinate
-  int tile_i = 8;
-  int tile_j = 16;
-  test<<<1, 128>>>(tensor_map, tile_i, tile_j);
+  int coordinate_m = 8;
+  int coordinate_k = 16;
+  test<<<1, 128>>>(tensor_map, coordinate_m, coordinate_k);
 
   cudaDeviceSynchronize();
 
