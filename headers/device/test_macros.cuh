@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Eddy: some useful macros
+
+
 #ifndef SUPPORT_TEST_MACROS_HPP
 #define SUPPORT_TEST_MACROS_HPP
 

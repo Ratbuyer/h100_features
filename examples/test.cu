@@ -1,54 +1,25 @@
-#include <cooperative_groups.h>
-#include <stdio.h>
+#include <iostream>
 
-__global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
+enum Cache_Policy
 {
-  // printf("blockIdx.x: %d, threadIdx.x: %d\n", blockIdx.x, threadIdx.x);
+  evict_normal,
+};
 
-  __shared__ int smem[32];
-  namespace cg = cooperative_groups;
-
-  // tid is the thread index within the cluster, not block.
-  int tid = cg::this_grid().thread_rank();
-
-  cg::cluster_group cluster = cg::this_cluster();
-  unsigned int clusterBlockRank = cluster.block_rank();
-  int cluster_size = cluster.dim_blocks().x;
-  
-  // cluster size = nubmer of blocks in the cluster
-  if (tid == 0) {
-    printf("cluster_size: %d\n", cluster_size);
-  }
-  
-  // initialize shared memory, block 1 has one value higher than block 0
-  smem[threadIdx.x] = blockIdx.x + threadIdx.x;
-
-  cluster.sync();
-
-  // get the shared memory of the other block
-  int *other_block_smem = cluster.map_shared_rank(smem, 1 - clusterBlockRank);
-
-  // get the value from the other block
-  int value = other_block_smem[threadIdx.x];
-
-  cluster.sync();
-
-  // print the value
-  printf("blockIdx.x: %d, threadIdx.x: %d, value: %d\n", blockIdx.x, threadIdx.x, value);
+__device__ void copy_async_prefetch(void * src, int size, Cache_Policy policy)
+{
+  asm volatile("cp.async.prefetch.global.L2::cache_hint [%0], %1;"
+               :
+               : "r"(src), "r"(size));
 }
 
-int main()
-{
+int main() {
+    // Example usage
+    void *src = nullptr; // Replace with actual source address
+    int size = 1024; // Replace with actual size
+    Cache_Policy policy = evict_normal;
+    
+    // Call the function (in the context of CUDA kernel)
+    // copy_async_prefetch<<<1, 1>>>(src, size, policy);
 
-  // two blocks in a cluster
-  cluster_kernel<<<2, 32>>>();
-
-  cudaDeviceSynchronize();
-
-  // check for kernel errors
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+    return 0;
 }

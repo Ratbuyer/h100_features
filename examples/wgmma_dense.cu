@@ -8,8 +8,8 @@
 #include <random>
 #include <iostream>
 
-#include "../headers/device/descriptor.cuh"
-#include "../headers/host/matrix_utilities.cuh"
+#include "descriptor.cuh"
+#include "matrix_utilities.cuh"
 
 const int M = 64;
 const int N = 8;

@@ -1,17 +1,18 @@
-// This code uses TMA's 1d load to load a matrix's tile to
+// This code uses TMA's 2d load to load a matrix's tile to
 // shared memory and then change the value in the
 // shared memory and uses TMA's store to store the
-// tile back to global memory.
+// tile back to global memory. We print the result matrix to prove the
+// changes are done
 
 #include <cuda/barrier>
 #include <cuda/std/utility> // cuda::std::move
 #include <stdio.h>
-#include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
 #include <cuda.h>
 
 #include "test_macros.cuh"
 #include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
+#include "tma.cuh"
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
@@ -43,7 +44,9 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
   uint64_t token;
   if (threadIdx.x == 0)
   {
-    // Fastest moving coordinate first.
+    // just to demonstrate prefetch
+    // copy_async_2d_prefetch(global_fake_tensor_map, base_j, base_i);
+    // call the loading api
     cde::cp_async_bulk_tensor_2d_global_to_shared(smem_buffer, &global_fake_tensor_map, base_j, base_i, bar);
     token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(smem_buffer));
   }
@@ -90,46 +93,47 @@ int main()
   cudaMalloc(&tensor_ptr, gmem_len * sizeof(int));
   cudaMemcpy(tensor_ptr, host_tensor, gmem_len * sizeof(int), cudaMemcpyHostToDevice);
 
-  // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
-  CUtensorMap local_tensor_map{};
-  // rank is the number of dimensions of the array.
-  constexpr uint32_t rank = 2;
-  uint64_t size[rank] = {GMEM_WIDTH, GMEM_HEIGHT};
-  // The stride is the number of bytes to traverse from the first element of one row to the next.
-  // It must be a multiple of 16.
-  uint64_t stride[rank - 1] = {GMEM_WIDTH * sizeof(int)};
-  // The box_size is the size of the shared memory buffer that is used as the
-  // destination of a TMA transfer.
-  uint32_t box_size[rank] = {SMEM_WIDTH, SMEM_HEIGHT};
-  // The distance between elements in units of sizeof(element). A stride of 2
-  // can be used to load only the real component of a complex-valued tensor, for instance.
-  uint32_t elem_stride[rank] = {1, 1};
+  // // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
+  // CUtensorMap local_tensor_map{};
+  // // rank is the number of dimensions of the array.
+  // constexpr uint32_t rank = 2;
+  // uint64_t size[rank] = {GMEM_WIDTH, GMEM_HEIGHT};
+  // // The stride is the number of bytes to traverse from the first element of one row to the next.
+  // // It must be a multiple of 16.
+  // uint64_t stride[rank - 1] = {GMEM_WIDTH * sizeof(int)};
+  // // The box_size is the size of the shared memory buffer that is used as the
+  // // destination of a TMA transfer.
+  // uint32_t box_size[rank] = {SMEM_WIDTH, SMEM_HEIGHT};
+  // // The distance between elements in units of sizeof(element). A stride of 2
+  // // can be used to load only the real component of a complex-valued tensor, for instance.
+  // uint32_t elem_stride[rank] = {1, 1};
 
-  // Get a function pointer to the cuTensorMapEncodeTiled driver API.
-  auto cuTensorMapEncodeTiled = get_cuTensorMapEncodeTiled();
+  // // Get a function pointer to the cuTensorMapEncodeTiled driver API.
+  // auto cuTensorMapEncodeTiled = get_cuTensorMapEncodeTiled();
 
-  // Create the tensor descriptor.
-  CUresult res = cuTensorMapEncodeTiled(
-      &local_tensor_map, // CUtensorMap *tensorMap,
-      CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_INT32,
-      rank,        // cuuint32_t tensorRank,
-      tensor_ptr,  // void *globalAddress,
-      size,        // const cuuint64_t *globalDim,
-      stride,      // const cuuint64_t *globalStrides,
-      box_size,    // const cuuint32_t *boxDim,
-      elem_stride, // const cuuint32_t *elementStrides,
-      CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
-      CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
-      CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
-      CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
+  // // Create the tensor descriptor.
+  // CUresult res = cuTensorMapEncodeTiled(
+  //     &local_tensor_map, // CUtensorMap *tensorMap,
+  //     CUtensorMapDataType::CU_TENSOR_MAP_DATA_TYPE_INT32,
+  //     rank,        // cuuint32_t tensorRank,
+  //     tensor_ptr,  // void *globalAddress,
+  //     size,        // const cuuint64_t *globalDim,
+  //     stride,      // const cuuint64_t *globalStrides,
+  //     box_size,    // const cuuint32_t *boxDim,
+  //     elem_stride, // const cuuint32_t *elementStrides,
+  //     CUtensorMapInterleave::CU_TENSOR_MAP_INTERLEAVE_NONE,
+  //     CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE,
+  //     CUtensorMapL2promotion::CU_TENSOR_MAP_L2_PROMOTION_NONE,
+  //     CUtensorMapFloatOOBfill::CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
 
-  assert(res == CUDA_SUCCESS && "tensormap creation failed.");
+  // assert(res == CUDA_SUCCESS && "tensormap creation failed.");
 
+  CUtensorMap tensor_map = create_2d_tensor_map(GMEM_WIDTH, GMEM_HEIGHT, SMEM_WIDTH, SMEM_HEIGHT, tensor_ptr);
 
   // launch kernel, select a tile coordinate
   int tile_i = 0;
   int tile_j = 16;
-  test<<<1, 128>>>(local_tensor_map, tile_i, tile_j);
+  test<<<1, 128>>>(tensor_map, tile_i, tile_j);
 
   cudaDeviceSynchronize();
 
