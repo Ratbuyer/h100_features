@@ -19,7 +19,7 @@ CUtensorMap create_2d_tensor_map(uint64_t tensor_dim1, uint64_t tensor_dim2, uin
   CUtensorMap local_tensor_map{};
   // rank is the number of dimensions of the array.
   constexpr uint32_t rank = 2;
-  uint64_t size[rank] = {tensor_dim1, tensor_dim2};
+  uint64_t size[rank] = {tensor_dim2, tensor_dim1};
   // The stride is the number of bytes to traverse from the first element of one row to the next.
   // It must be a multiple of 16.
   uint64_t stride[rank - 1] = {tensor_dim2 * sizeof(int)};
