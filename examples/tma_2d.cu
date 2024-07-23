@@ -25,7 +25,7 @@ constexpr size_t K = 32; // Height of tensor (in # elements)
 constexpr size_t gmem_len = M * K;
 
 constexpr int m = 16; // Width of shared memory buffer (in # elements)
-constexpr int k = 16; // Height of shared memory buffer (in # elements)
+constexpr int k = 8; // Height of shared memory buffer (in # elements)
 
 static constexpr int buf_len = k * m;
 
@@ -62,7 +62,7 @@ __global__ void test(const __grid_constant__ CUtensorMap global_fake_tensor_map,
   // Update smem, change from 1 to 2
   for (int i = threadIdx.x; i < buf_len; i += blockDim.x)
   {
-    smem_buffer[i] += threadIdx.x;
+    smem_buffer[i] += 1;
   }
 
   cde::fence_proxy_async_shared_cta();
