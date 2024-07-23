@@ -22,10 +22,10 @@ CUtensorMap create_2d_tensor_map(uint64_t tensor_dim1, uint64_t tensor_dim2, uin
   uint64_t size[rank] = {tensor_dim1, tensor_dim2};
   // The stride is the number of bytes to traverse from the first element of one row to the next.
   // It must be a multiple of 16.
-  uint64_t stride[rank - 1] = {tensor_dim1 * sizeof(int)};
+  uint64_t stride[rank - 1] = {tensor_dim2 * sizeof(int)};
   // The box_size is the size of the shared memory buffer that is used as the
   // destination of a TMA transfer.
-  uint32_t box_size[rank] = {tile_dim1, tile_dim2};
+  uint32_t box_size[rank] = {tile_dim2, tile_dim1};
   // The distance between elements in units of sizeof(element). A stride of 2
   // can be used to load only the real component of a complex-valued tensor, for instance.
   uint32_t elem_stride[rank] = {1, 1};
