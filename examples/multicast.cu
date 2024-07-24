@@ -81,7 +81,7 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
   // verify block 1 recieved the data
   if (clusterBlockRank == 0 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
       printf("%d|", tile_shared[i]);
@@ -89,13 +89,10 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
-  __threadfence();
-  __syncthreads();
-  cluster.sync();
 
   if (clusterBlockRank == 1 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
       printf("%d|", tile_shared[i]);
@@ -103,13 +100,10 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
-  __threadfence();
-  __syncthreads();
-  cluster.sync();
 
   if (clusterBlockRank == 2 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
       printf("%d|", tile_shared[i]);
@@ -117,13 +111,10 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
-  __threadfence();
-  __syncthreads();
-  cluster.sync();
 
   if (clusterBlockRank == 3 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
       printf("%d|", tile_shared[i]);
