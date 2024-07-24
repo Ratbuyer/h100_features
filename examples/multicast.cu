@@ -24,7 +24,7 @@ namespace cg = cooperative_groups;
 
 const int array_size = 128;
 const int tile_size = 16;
-const int cluster_size = 4;
+const int cluster_size = 4; // we use 4 blocks in a cluster
 
 __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate, int *result)
 {
@@ -35,7 +35,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
   __shared__ alignas(16) int tile_shared[tile_size];
 
   // we let the first block in the cluster to load a
-  // tile to the shared memory of both blocks
+  // tile to the shared memory of all 4 blocks
   if (clusterBlockRank == 0)
   {
     __shared__ barrier bar;
@@ -50,7 +50,14 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
     barrier::arrival_token token;
     if (threadIdx.x == 0)
     {
-      uint16_t ctaMask = 0b111;
+      /*
+      each bit represents a block in the cluster
+
+      here we use block mask 1101, which means
+      the first 3 blocks will recieve the data from multicast
+      whereas the last block will not
+      */
+      uint16_t ctaMask = 0b1101;
       asm volatile(
           "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
           "[%0], [%1, {%2}], [%3], %4;\n"
@@ -72,7 +79,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
     bar.wait(std::move(token));
   }
 
-  // cluster 1 needs to wait for cluster 0 to load the data
+  // rest of the clusters needs to wait for cluster 0 to load the data
   cluster.sync();
 
   // put the results back
