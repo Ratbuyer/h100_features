@@ -106,7 +106,7 @@ int main()
   cudaMemcpy(h_data, d_data, array_size * sizeof(int), cudaMemcpyDeviceToHost);
   cudaFree(d_data);
 
-  print_matrix(h_data, tile_size, array_size);
+  print_matrix(h_data, array_size / tile_size, tile_size);
 
   return 0;
 }
