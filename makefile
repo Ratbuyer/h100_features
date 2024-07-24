@@ -7,7 +7,7 @@ OUTPUT=bins/bin
 
 
 all:
-	make tma_1d
+	make sparse
 	make run
 
 test:
