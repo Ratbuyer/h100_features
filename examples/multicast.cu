@@ -77,7 +77,7 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
   cluster.sync();
 
   // verify other block recieved the data
-  if (clusterBlockRank == 1)
+  if (clusterBlockRank == 1 && threadIdx.x == 0)
   {
     printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
@@ -87,7 +87,6 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
-  __threadfence();
   __syncthreads();
 }
 

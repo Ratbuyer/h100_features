@@ -6,7 +6,7 @@
 #include <cooperative_groups.h>
 #include <stdio.h>
 
-#include "kernel.cuh"
+#include "profile_utilities.cuh"
 
 __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
 {
