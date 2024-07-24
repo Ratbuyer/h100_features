@@ -1,4 +1,9 @@
-// This code demonstrates how to use the sparse wgmma instructions
+/*
+This code demonstrates how to use the sparse wgmma instructions
+to perform matrix multiplication
+
+Sparse means matrix A follows a 2:4 format
+*/
 
 #include <stdio.h>
 #include <cuda.h>
@@ -16,6 +21,8 @@
 const int M = 64;
 const int N = 8;
 const int K = 32;
+
+// 2:4 format
 const int K2 = 16;
 
 __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
@@ -30,7 +37,8 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
   __align__(16) __shared__ half A_shared[M * K2];
   __align__(16) __shared__ half B_shared[K * N];
 
-  // 8x8 core blocks
+  // use one thread to load so it's easier to tell the layout
+  // refer to the ptx menu for the layout of the shared memory
   if (tid == 0)
   {
     for (int i = 0; i < M; i++)
@@ -62,20 +70,23 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
     }
   }
 
+  __syncthreads();
+
+  // load metadata
   u_int32_t metadata;
   uint metadata_offset = warp_id * 16 + lane_in_work_group * 8 + group_id;
-
   metadata = metadata_array[metadata_offset];
-  metadata = 0x44444444;
 
   __syncthreads();
 
+  // create descriptors
   GmmaDescriptor desc_a = make_desc_a(A_shared);
   GmmaDescriptor desc_b = make_desc_b(B_shared);
 
+  // accumulator
   uint32_t c[2] = {};
 
-  asm volatile("wgmma.fence.sync.aligned; \n");
+  warpgroup_arrive();
 
   asm volatile("wgmma.mma_async.sp.sync.aligned.m64n8k32.f16.f16.f16 "
                "{%0, %1}, " // c
@@ -93,14 +104,18 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
                  "n"(1), "n"(1),  // +- scale A, B
                  "n"(0), "n"(1)); // transpose A, B
 
-  asm volatile("wgmma.commit_group.sync.aligned; \n");
+  // commit, start the computation
+  warpgroup_commit_batch();
 
-  asm volatile("wgmma.wait_group.sync.aligned 0; \n");
+  // wait for the previous commit to finish
+  warpgroup_wait<0>();
 
-  __syncthreads();
+  // thread fence needed for async operations
+  __threadfence();
 
-  asm volatile("wgmma.fence.sync.aligned; \n");
+  warpgroup_arrive();
 
+  // store the result
   uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
 
   int offset1 = warp_id * 16 * 4 + group_id * 4 + lane_in_group;
@@ -125,6 +140,7 @@ int main()
 
   // print_matrix(h_A, M, K);
 
+  // extract the non-zeros in each 2:4 tile to a compressed matrix A2
   compress24(h_A, h_A2, M, K);
 
   // print_matrix(h_A2, M, K2);
