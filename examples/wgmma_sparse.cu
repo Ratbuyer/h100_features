@@ -27,8 +27,6 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
   const int lane_in_group = lane_id & 3;
   const int lane_in_work_group = lane_in_group % 2;
 
-  __syncthreads();
-
   __align__(16) __shared__ half A_shared[M * K2];
   __align__(16) __shared__ half B_shared[K * N];
 
@@ -64,52 +62,52 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
   //   }
   // }
 
-  u_int32_t metadata;
-  uint metadata_offset = warp_id * 16 + lane_in_work_group * 8 + group_id;
+  // u_int32_t metadata;
+  // uint metadata_offset = warp_id * 16 + lane_in_work_group * 8 + group_id;
 
-  // metadata = metadata_array[metadata_offset];
-  metadata = 0x44444444;
+  // // metadata = metadata_array[metadata_offset];
+  // metadata = 0x44444444;
 
-  __syncthreads();
+  // __syncthreads();
 
-  GmmaDescriptor desc_a = make_desc_a(A_shared);
-  GmmaDescriptor desc_b = make_desc_b(B_shared);
+  // GmmaDescriptor desc_a = make_desc_a(A_shared);
+  // GmmaDescriptor desc_b = make_desc_b(B_shared);
 
-  uint32_t c[2] = {};
+  // uint32_t c[2] = {};
 
-  asm volatile("wgmma.fence.sync.aligned; \n");
+  // asm volatile("wgmma.fence.sync.aligned; \n");
 
-  asm volatile("wgmma.mma_async.sp.sync.aligned.m64n8k32.f16.f16.f16 "
-             "{%0, %1}, " // c
-             "%2, %3, "   // desc A, B
-             "%4, "       // meta
-             "0, "       // thread selection
-             "1, "       // scale D
-             "%7, %8, "   // +/- scale A, B
-             "%9, %10;"   // transpose A, B
-             : "+r"(c[0]), "+r"(c[1])
-             : "l"(desc_a), "l"(desc_b),
-               "r"(metadata),   // metadata
-               "r"(0),        // thread selection
-               "r"(1),          // scale D
-               "n"(1), "n"(1),  // +- scale A, B
-               "n"(0), "n"(1)); // transpose A, B
+  // asm volatile("wgmma.mma_async.sp.sync.aligned.m64n8k32.f16.f16.f16 "
+  //            "{%0, %1}, " // c
+  //            "%2, %3, "   // desc A, B
+  //            "%4, "       // meta
+  //            "0, "       // thread selection
+  //            "1, "       // scale D
+  //            "%7, %8, "   // +/- scale A, B
+  //            "%9, %10;"   // transpose A, B
+  //            : "+r"(c[0]), "+r"(c[1])
+  //            : "l"(desc_a), "l"(desc_b),
+  //              "r"(metadata),   // metadata
+  //              "r"(0),        // thread selection
+  //              "r"(1),          // scale D
+  //              "n"(1), "n"(1),  // +- scale A, B
+  //              "n"(0), "n"(1)); // transpose A, B
 
-  asm volatile("wgmma.commit_group.sync.aligned; \n");
+  // asm volatile("wgmma.commit_group.sync.aligned; \n");
 
-  asm volatile("wgmma.wait_group.sync.aligned 0; \n");
+  // asm volatile("wgmma.wait_group.sync.aligned 0; \n");
 
-  __syncthreads();
+  // __syncthreads();
 
-  asm volatile("wgmma.fence.sync.aligned; \n");
+  // asm volatile("wgmma.fence.sync.aligned; \n");
 
-  uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
+  // uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
 
-  int offset1 = warp_id * 16 * 4 + group_id * 4 + lane_in_group;
-  int offset2 = warp_id * 16 * 4 + (group_id + 8) * 4 + lane_in_group;
+  // int offset1 = warp_id * 16 * 4 + group_id * 4 + lane_in_group;
+  // int offset2 = warp_id * 16 * 4 + (group_id + 8) * 4 + lane_in_group;
 
-  C_ptr[offset1] = c[0];
-  C_ptr[offset2] = c[1];
+  // C_ptr[offset1] = c[0];
+  // C_ptr[offset2] = c[1];
 }
 
 int main()
