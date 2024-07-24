@@ -39,7 +39,7 @@ __global__ void add_one_kernel(const __grid_constant__ CUtensorMap tensor_map, i
   {
     cde::cp_async_bulk_tensor_1d_global_to_shared(tile_shared, &tensor_map, coordinate, bar);
     // 3a. Arrive on the barrier and tell how many bytes are expected to come in (the transaction count)
-    token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(array_size));
+    token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(tile_shared));
   }
   else
   {
@@ -74,6 +74,9 @@ __global__ void add_one_kernel(const __grid_constant__ CUtensorMap tensor_map, i
     // Wait for the group to have completed reading from shared memory.
     cde::cp_async_bulk_wait_group_read<0>();
   }
+
+  __threadfence();
+  __syncthreads();
 }
 
 int main()
@@ -96,7 +99,7 @@ int main()
   CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
 
   size_t offset = 0;
-  add_one_kernel<<<1, 256>>>(tensor_map, offset);
+  add_one_kernel<<<1, 128>>>(tensor_map, offset);
 
   cuda_check_error();
 
