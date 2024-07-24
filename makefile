@@ -7,7 +7,7 @@ OUTPUT=bins/bin
 
 
 all:
-	make sparse
+	make multicast
 	make run
 
 test:
@@ -36,6 +36,7 @@ multicast:
 
 pull:
 	git pull
+	make all
 
 push:
 	git add .
