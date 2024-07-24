@@ -50,8 +50,6 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
     barrier::arrival_token token;
     if (threadIdx.x == 0)
     {
-      cde::cp_async_bulk_tensor_1d_global_to_shared(tile_shared, &tensor_map, coordinate, bar);
-
       uint16_t ctaMask = 0b111;
       asm volatile(
           "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
