@@ -74,6 +74,8 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
   }
 
   // cluster 1 needs to wait for cluster 0 to load the data
+  __threadfence();
+  __syncthreads();
   cluster.sync();
 
   // verify block 1 recieved the data
@@ -87,6 +89,8 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
+  __threadfence();
+  __syncthreads();
   cluster.sync();
 
   if (clusterBlockRank == 1 && threadIdx.x == 0)
@@ -99,6 +103,8 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
+  __threadfence();
+  __syncthreads();
   cluster.sync();
 
   if (clusterBlockRank == 2 && threadIdx.x == 0)
@@ -111,6 +117,8 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
+  __threadfence();
+  __syncthreads();
   cluster.sync();
 
   if (clusterBlockRank == 3 && threadIdx.x == 0)
@@ -123,7 +131,9 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
+  __threadfence();
   __syncthreads();
+  cluster.sync();
 }
 
 int main()
