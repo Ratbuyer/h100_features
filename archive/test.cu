@@ -98,7 +98,7 @@ int main()
   // create tensor map
   CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
 
-  size_t offset = 0;
+  size_t offset = tile_size * 1; // select the second tile of the array to change
   add_one_kernel<<<1, 128>>>(tensor_map, offset);
 
   cuda_check_error();
