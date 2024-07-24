@@ -51,7 +51,7 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
     {
       cde::cp_async_bulk_tensor_1d_global_to_shared(tile_shared, &tensor_map, coordinate, bar);
 
-      uint16_t ctaMask = 3;
+      uint16_t ctaMask = 1;
       asm volatile(
           "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
           "[%0], [%1, {%2}], [%3], %4;\n"
