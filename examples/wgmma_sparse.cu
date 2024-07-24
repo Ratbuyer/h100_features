@@ -147,10 +147,10 @@ int main()
   int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
 
   u_int32_t *d_metadata;
-  // cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
-  // cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice);
+  cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
+  cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice);
 
-  // kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
+  kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
 
   cuda_check_error();
 
@@ -160,7 +160,7 @@ int main()
 
   CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  // compare_matrices(h_C, h_CPU, M, N);
+  compare_matrices(h_C, h_CPU, M, N);
 
   return 0;
 }
