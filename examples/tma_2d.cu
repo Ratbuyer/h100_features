@@ -11,14 +11,13 @@
 #include <stdio.h>
 #include <cuda.h>
 
-#include "test_macros.cuh"
 #include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
 #include "tma.cuh"
 #include "profile_utilities.cuh"
 
 // Suppress warning about barrier in shared memory
-TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
+#pragma nv_diag_suppress static_var_with_dynamic_init
 
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
