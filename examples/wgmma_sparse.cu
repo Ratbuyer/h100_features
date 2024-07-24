@@ -159,5 +159,7 @@ int main()
 
   compare_matrices(h_CPU, h_C, M, N);
 
+  print_differnce(h_CPU, h_C, M, N, 0);
+
   return 0;
 }
