@@ -131,12 +131,12 @@ int main()
 
   half *d_A, *d_B;
 
-  // cudaMalloc((void **)&d_A, M * K2 * sizeof(half));
-  // cudaMalloc((void **)&d_B, K * N * sizeof(half));
-  // cudaMalloc((void **)&d_C, M * N * sizeof(half));
+  cudaMalloc((void **)&d_A, M * K2 * sizeof(half));
+  cudaMalloc((void **)&d_B, K * N * sizeof(half));
+  cudaMalloc((void **)&d_C, M * N * sizeof(half));
 
-  // cudaMemcpy(d_A, h_A2, M * K2 * sizeof(half), cudaMemcpyHostToDevice);
-  // cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_A, h_A2, M * K2 * sizeof(half), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
   // u_int32_t *metadata_array = nullptr;
   // int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
