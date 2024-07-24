@@ -7,7 +7,7 @@ OUTPUT=bins/bin
 
 
 all:
-	make tma_2d
+	make tma_1d
 	make run
 
 test:

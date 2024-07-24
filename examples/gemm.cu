@@ -16,6 +16,7 @@
 #include "wgmma.cuh"
 #include "tma_tensor_map.cuh"
 #include "test_macros.cuh"
+#include "kernel.cuh"
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
@@ -251,13 +252,7 @@ int main()
 
   gemm<<<blocks, threads_per_block>>>(d_A, d_B, d_C, A_tensor_descriptor);
 
-  cudaDeviceSynchronize();
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    printf("CUDA error: %s\n", cudaGetErrorString(err));
-  }
+  cuda_check_error();
 
   cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 
