@@ -18,12 +18,8 @@ const int N = 8;
 const int K = 32;
 const int K2 = 16;
 
-const int threads_per_block = 32 * 4; // 4 warps
-const int blocks = 1;
-
-__global__ void work(half *A, half *B, half *C, u_int32_t *metadata_array)
+__global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
 {
-
   const int tid = threadIdx.x;
   const int warp_id = tid / 32;
   const int lane_id = tid % 32;
@@ -132,11 +128,11 @@ int main()
   fill_24(h_A, M, K);
   fill_random(h_B, K, N);
 
-  // print_matrix(h_A, M, K);
+  print_matrix(h_A, M, K);
 
   compress24(h_A, h_A2, M, K);
 
-  // print_matrix(h_A2, M, K2);
+  print_matrix(h_A2, M, K2);
 
   half *d_A, *d_B;
 
@@ -154,7 +150,7 @@ int main()
   cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
   cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice);
 
-  work<<<blocks, threads_per_block>>>(d_A, d_B, d_C, d_metadata);
+  // kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
 
   cuda_check_error();
 
