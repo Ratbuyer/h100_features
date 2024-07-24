@@ -85,7 +85,7 @@ int main()
     h_data[i] = i;
   }
 
-  print_matrix(h_data, tile_size, array_size);
+  print_matrix(h_data, array_size / tile_size, tile_size);
 
   // transfer array to device
   int *d_data = nullptr;
