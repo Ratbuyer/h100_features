@@ -73,10 +73,11 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
     bar.wait(std::move(token));
   }
 
+  // cluster 1 needs to wait for cluster 0 to load the data
   cluster.sync();
 
   // verify other block recieved the data
-  if (clusterBlockRank == 1)
+  if (clusterBlockRank == 1 && threadIdx.x == 0)
   {
     for (int i = 0; i < tile_size; ++i)
     {
