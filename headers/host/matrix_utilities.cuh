@@ -128,7 +128,7 @@ void compare_matrices(half *A, half *B, int rows, int cols)
   printf("Total error: %.2f%%\n", percentage_diff);
 }
 
-void print_differnce(half *A, half *B, int rows, int cols, float error_range)
+void print_differnce(half *A, half *B, int rows, int cols, float tolerance)
 {
   for (int i = 0; i < rows; i++)
   {
@@ -136,7 +136,7 @@ void print_differnce(half *A, half *B, int rows, int cols, float error_range)
     {
       float a = __half2float(A[i * cols + j]);
       float b = __half2float(B[i * cols + j]);
-      bool is_same = a - error_range < b && a + error_range > b;
+      bool is_same = a - tolerance < b && a + tolerance > b;
       if (!is_same)
       {
         printf("Error at (%d, %d) : %f != %f\n", i, j, a, b);
@@ -293,24 +293,4 @@ __host__ int inspect_metadata(half *mat, u_int32_t *meta, int M, int K)
   printf("zero tile persentage: %lf\n", persentage);
 
   return total_size * 8;
-}
-
-void wgmma_reorder_A(half *A, half *reordered_A, int M, int K, int M2, int K2)
-{
-
-  int blocks_in_m = M / M2;
-  int blocks_in_k = K / K2;
-
-  for (int m = 0; m < blocks_in_m; m++)
-  {
-    for (int k = 0; k < blocks_in_k; k++)
-    {
-      for (int i = 0; i < M2; i++)
-      {
-        for (int j = 0; j < K2; j++)
-        {
-        }
-      }
-    }
-  }
 }

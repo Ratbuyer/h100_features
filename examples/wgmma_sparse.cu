@@ -66,7 +66,7 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
   uint metadata_offset = warp_id * 16 + lane_in_work_group * 8 + group_id;
 
   metadata = metadata_array[metadata_offset];
-  // metadata = 0x44444444;
+  metadata = 0x44444444;
 
   __syncthreads();
 
@@ -159,7 +159,7 @@ int main()
 
   compare_matrices(h_CPU, h_C, M, N);
 
-  print_differnce(h_CPU, h_C, M, N, 0);
+  // print_differnce(h_CPU, h_C, M, N, 0);
 
   return 0;
 }
