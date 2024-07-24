@@ -138,8 +138,10 @@ int main()
   cudaMemcpy(d_A, h_A2, M * K2 * sizeof(half), cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
+  int metadata_size = 64;
+
   u_int32_t *metadata_array = nullptr;
-  int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
+  inspect_metadata(h_A, metadata_array, M, K);
   printf("Metadata size: %d\n", metadata_size);
 
   u_int32_t *d_metadata;
