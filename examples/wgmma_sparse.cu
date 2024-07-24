@@ -138,15 +138,14 @@ int main()
   cudaMemcpy(d_A, h_A2, M * K2 * sizeof(half), cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
-  int metadata_size = 64;
+  int metadata_size = (M / 16) * (K / 16) * 8;
 
-  u_int32_t *metadata_array = nullptr;
+  u_int32_t *metadata_array = new u_int32_t[metadata_size];
   inspect_metadata(h_A, metadata_array, M, K);
-  printf("Metadata size: %d\n", metadata_size);
 
   u_int32_t *d_metadata;
   CHECK_CUDA(cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t)));
-  CHECK_CUDA(cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_metadata, metadata_array, 256, cudaMemcpyHostToDevice));
 
   // kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
 
@@ -158,7 +157,7 @@ int main()
 
   CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  compare_matrices(h_C, h_CPU, M, N);
+  compare_matrices(h_CPU, h_C, M, N);
 
   return 0;
 }

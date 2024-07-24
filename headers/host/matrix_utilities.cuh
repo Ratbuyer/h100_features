@@ -216,8 +216,6 @@ __host__ int inspect_metadata(half *mat, u_int32_t *meta, int M, int K)
 
   const int total_size = (M / 16) * (K / 16);
 
-  meta = new u_int32_t[total_size * 8];
-
   int zero_tile = 0;
 
   for (int m = 0; m < M / 16; m++)
