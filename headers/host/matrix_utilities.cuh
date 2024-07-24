@@ -186,7 +186,7 @@ void fill_24(half *matrix, int rows, int cols)
     int position1 = rand() % 4;
     int position2 = rand() % 4;
 
-    position2 = position2 == position1 ? (position2 + 1) % 4 : position2;
+    // position2 = position2 == position1 ? (position2 + 1) % 4 : position2;
 
     matrix[i + position1] = __float2half(1.0f);
     matrix[i + position2] = __float2half(1.0f);

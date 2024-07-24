@@ -7,7 +7,7 @@ OUTPUT=bins/bin
 
 
 all:
-	make multicast
+	make sparse
 	make run
 
 test:
