@@ -51,7 +51,7 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
     {
       cde::cp_async_bulk_tensor_1d_global_to_shared(tile_shared, &tensor_map, coordinate, bar);
 
-      uint16_t ctaMask = 1;
+      uint16_t ctaMask = 2;
       asm volatile(
           "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
           "[%0], [%1, {%2}], [%3], %4;\n"
@@ -76,8 +76,18 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
   // cluster 1 needs to wait for cluster 0 to load the data
   cluster.sync();
 
-  // verify other block recieved the data
+  // verify block 1 recieved the data
   if (clusterBlockRank == 1 && threadIdx.x == 0)
+  {
+    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    for (int i = 0; i < tile_size; ++i)
+    {
+      printf("%d|", tile_shared[i]);
+    }
+    printf("\n");
+  }
+
+    if (clusterBlockRank == 0 && threadIdx.x == 0)
   {
     printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
