@@ -31,6 +31,9 @@ tma_1d:
 tma_2d:
 	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/tma_2d.cu
 
+pull:
+	git pull
+
 push:
 	git add .
 	git commit -m "update"
