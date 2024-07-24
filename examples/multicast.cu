@@ -26,7 +26,7 @@ const int array_size = 128;
 const int tile_size = 16;
 const int cluster_size = 4;
 
-__global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
+__global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate, int *result)
 {
   // cluster metadata
   cg::cluster_group cluster = cg::this_cluster();
@@ -75,55 +75,39 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
   }
 
   // cluster 1 needs to wait for cluster 0 to load the data
-  __threadfence();
-  __syncthreads();
   cluster.sync();
 
-  // verify block 1 recieved the data
+  // put the results back
   if (clusterBlockRank == 0 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
-      printf("%d|", tile_shared[i]);
+      result[clusterBlockRank * tile_size] = tile_shared[i];
     }
-    printf("\n");
   }
-
-  cluster.sync();
 
   if (clusterBlockRank == 1 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
-      printf("%d|", tile_shared[i]);
+      result[clusterBlockRank * tile_size] = tile_shared[i];
     }
-    printf("\n");
   }
-
-  cluster.sync();
 
   if (clusterBlockRank == 2 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
-      printf("%d|", tile_shared[i]);
+      result[clusterBlockRank * tile_size] = tile_shared[i];
     }
-    printf("\n");
   }
-
-  cluster.sync();
 
   if (clusterBlockRank == 3 && threadIdx.x == 0)
   {
-    printf("clusterBlockRank: %d, threadIdx.x: %d ", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
-      printf("%d|", tile_shared[i]);
+      result[clusterBlockRank * tile_size] = tile_shared[i];
     }
-    printf("\n");
   }
 
   __threadfence();
@@ -152,13 +136,21 @@ int main()
   // create tensor map
   CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
 
+  // a 2d array that will be used to store the tile loaded to each block
+  int *d_result = nullptr;
+  cudaMalloc(&d_result, tile_size * cluster_size * sizeof(int));
+
   size_t offset = tile_size * 3; // select the second tile of the array to change
-  kernel<<<cluster_size, 128>>>(tensor_map, offset);
+  kernel<<<cluster_size, 128>>>(tensor_map, offset, d_result);
 
   cuda_check_error();
 
-  int *d_result = nullptr;
-  cudaMalloc(&d_result, tile_size * 4 * sizeof(int));
+  // transfer the result back to host
+  int h_result[tile_size * cluster_size];
+  cudaMemcpy(h_result, d_result, tile_size * cluster_size * sizeof(int), cudaMemcpyDeviceToHost);
+
+  // print the result for each block
+  print_matrix(h_result, cluster_size, tile_size);
 
   cudaFree(d_data);
 
