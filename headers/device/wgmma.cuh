@@ -20,6 +20,7 @@ __device__ void warpgroup_wait() {
 }
 
 // wgmma tensor descriptor
+// https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor
 // taken from https://github.com/KnowingNothing/MatmulTutorial/blob/18366a51005c3b3395449d5eb5da02ec56198b65/examples/atom/single-wgmma-f8.cu#L169
 union GmmaDescriptor
 {

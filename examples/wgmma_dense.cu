@@ -1,4 +1,7 @@
-// This code demonstrates how to use the wgmma instructions
+/*
+This code demonstrates how to use the dense wgmma instructions
+to perform matrix multiplication
+*/
 
 #include <stdio.h>
 #include <cuda.h>
@@ -21,6 +24,7 @@ const int blocks = 1;
 
 __global__ void kernel(half *A, half *B, half *C)
 {
+  // metadata
   const int tid = threadIdx.x;
   const int warp_id = tid / 32;
   const int lane_id = tid % 32;
@@ -32,10 +36,11 @@ __global__ void kernel(half *A, half *B, half *C)
   __align__(16) __shared__ half A_shared[M * K];
   __align__(16) __shared__ half B_shared[K * N];
 
-  // 8x8 core blocks
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-multiply-and-accumulate-instruction-wgmma-mma-async
+  // 8x8 core blocks, we use one thread here to
+  // easy demonstrate the required layout
   if (tid == 0)
   {
-
     for (int i = 0; i < M; i++)
     {
       for (int j = 0; j < K; j++)
@@ -67,49 +72,44 @@ __global__ void kernel(half *A, half *B, half *C)
 
   __syncthreads();
 
+  // create descriptors for the matrices
   GmmaDescriptor desc_a = make_desc_a(A_shared);
   GmmaDescriptor desc_b = make_desc_b(B_shared);
 
+  // accumulator
   uint32_t c[2] = {};
 
-  asm volatile("wgmma.fence.sync.aligned; \n");
+  // called whenever the accumulator is accessed
+  warpgroup_arrive();
 
   // wgmma.mma_async.sync.aligned.shape.dtype.f16.f16  d, a-desc, b-desc, scale-d, imm-scale-a, imme-scale-b, imm-trans-a, imm-trans-b;
   // wgmma.mma_async.sync.aligned.shape.dtype.f16.f16  d, a, b-desc, scale-d, imm-scale-a, imme-scale-b, imm-trans-b;
   asm volatile("wgmma.mma_async.sync.aligned.m64n8k16.f16.f16.f16 "
-               "{%0, %1}, "
-               "%2, %3, "
-               "1, "
-               "1, 1, "
-               "0, 1;"
+               "{%0, %1}, " // accumulator
+               "%2, %3, "   // matrix a descriptor
+               "1, "        // 0 => D = A*B, 1 => D = D + A*B
+               "1, 1, "     // 0 => no scaling, 1 => scaling, scaling means times -1 to a or b
+               "0, 1;"      // transpose a and b, 0 => no transpose, 1 => transpose
                : "+r"(c[0]), "+r"(c[1])
                : "l"(desc_a), "l"(desc_b));
 
-  asm volatile("wgmma.commit_group.sync.aligned; \n");
+  // commit, start the computation
+  warpgroup_commit_batch();
 
-  asm volatile("wgmma.wait_group.sync.aligned 0; \n");
+  // wait for the previous commit to finish
+  warpgroup_wait<0>();
 
-  __syncthreads();
+  // thread fence needed for async operations
+  __threadfence();
 
-  asm volatile("wgmma.fence.sync.aligned; \n");
-
-  // half * reg_ptr = reinterpret_cast<half *>(&reg);
-
-  // if (tid == 0) {
-  //   printf("%f\n", __half2float(reg_ptr[0]));
-  // }
+  warpgroup_arrive();
 
   uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
 
   int offset1 = warp_id * 16 * 4 + group_id * 4 + lane_in_group;
   int offset2 = warp_id * 16 * 4 + (group_id + 8) * 4 + lane_in_group;
 
-  // if (offset1 > 32 * 4) {
-  //   // printf("offset: %d\n", offset1);
-  //   half * c_half_ptr = reinterpret_cast<half *>(c);
-  //   printf("c : %f\n", __half2float(c_half_ptr[0]));
-  // }
-
+  // write back to global memory
   C_ptr[offset1] = c[0];
   C_ptr[offset2] = c[1];
 }
@@ -123,13 +123,10 @@ int main()
   half h_A[M * K];
   half h_B[K * N];
 
+  fill_fixed(h_C, M, N, 0);
+
   fill_random(h_A, M, K);
   fill_random(h_B, K, N);
-
-  for (int i = 0; i < M * N; i++)
-  {
-    h_C[i] = 0.0f;
-  }
 
   half *d_A, *d_B;
 
@@ -152,7 +149,7 @@ int main()
 
   compare_matrices(h_C, h_CPU, M, N);
 
-  print_differnce(h_C, h_CPU, M, N, 0.0f);
+  // print_differnce(h_C, h_CPU, M, N, 0.0f);
 
   return 0;
 }
