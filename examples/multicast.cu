@@ -52,7 +52,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
     {
       cde::cp_async_bulk_tensor_1d_global_to_shared(tile_shared, &tensor_map, coordinate, bar);
 
-      uint16_t ctaMask = 3;
+      uint16_t ctaMask = 0b111;
       asm volatile(
           "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
           "[%0], [%1, {%2}], [%3], %4;\n"
@@ -76,6 +76,8 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
 
   // cluster 1 needs to wait for cluster 0 to load the data
   cluster.sync();
+
+  printf("clusterBlockRank %d, threadIdx.x %d\n", clusterBlockRank, threadIdx.x);
 
   // put the results back
   if (clusterBlockRank == 0 && threadIdx.x == 0)
