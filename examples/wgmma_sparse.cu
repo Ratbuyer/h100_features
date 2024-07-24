@@ -138,13 +138,13 @@ int main()
   cudaMemcpy(d_A, h_A2, M * K2 * sizeof(half), cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
-  // u_int32_t *metadata_array = nullptr;
-  // int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
-  // printf("Metadata size: %d\n", metadata_size);
+  u_int32_t *metadata_array = nullptr;
+  int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
+  printf("Metadata size: %d\n", metadata_size);
 
-  // u_int32_t *d_metadata;
-  // cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
-  // cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice);
+  u_int32_t *d_metadata;
+  cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
+  cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice);
 
   // kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
 
