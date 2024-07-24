@@ -1,7 +1,13 @@
-// This code uses TMA's 1d load to load an array to
-// shared memory and then change the value in the
-// shared memory and uses TMA's store to store the
-// array back to global memory.
+/*
+This code uses TMA's 1d tensor load to load
+a portion of an array to shared memory and then
+change the value in the shared memory and uses TMA's store
+to store the portion back to global memory. We print the result
+to show the changes are done.
+*/
+
+// supress warning about barrier in shared memory on line 32
+#pragma nv_diag_suppress static_var_with_dynamic_init
 
 #include <cuda/barrier>
 #include <iostream>
@@ -16,15 +22,14 @@ namespace cde = cuda::device::experimental;
 const int array_size = 128;
 const int tile_size = 16;
 
-__global__ void add_one_kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
+__global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
 {
-  // Shared memory buffers for x and y. The destination shared memory buffer of
+  // Shared memory buffers for tile. The destination shared memory buffer of
   // a bulk operations should be 16 byte aligned.
   __shared__ alignas(16) int tile_shared[tile_size];
 
   // 1. a) Initialize shared memory barrier with the number of threads participating in the barrier.
   //    b) Make initialized barrier visible in async proxy.
-  // #pragma nv_diag_suppress static_var_with_dynamic_init
   __shared__ barrier bar;
   if (threadIdx.x == 0)
   {
@@ -50,7 +55,7 @@ __global__ void add_one_kernel(const __grid_constant__ CUtensorMap tensor_map, i
   // 3c. Wait for the data to have arrived.
   bar.wait(std::move(token));
 
-  // 4. Compute saxpy and write back to shared memory
+  // 4. change the value in shared memory
   for (int i = threadIdx.x; i < array_size; i += blockDim.x)
   {
     if (i < tile_size)
@@ -88,6 +93,8 @@ int main()
     h_data[i] = i;
   }
 
+  // print the array before the kernel
+  // one tile per line
   print_matrix(h_data, array_size / tile_size, tile_size);
 
   // transfer array to device
@@ -99,13 +106,14 @@ int main()
   CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
 
   size_t offset = tile_size * 1; // select the second tile of the array to change
-  add_one_kernel<<<1, 128>>>(tensor_map, offset);
+  kernel<<<1, 128>>>(tensor_map, offset);
 
   cuda_check_error();
 
   cudaMemcpy(h_data, d_data, array_size * sizeof(int), cudaMemcpyDeviceToHost);
   cudaFree(d_data);
 
+  // print the array after the kernel
   print_matrix(h_data, array_size / tile_size, tile_size);
 
   return 0;
