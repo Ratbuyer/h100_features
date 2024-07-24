@@ -146,7 +146,7 @@ int main()
   cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
   cudaMemcpy(d_metadata, metadata_array, metadata_size * sizeof(u_int32_t), cudaMemcpyHostToDevice);
 
-  kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
+  // kernel<<<1, 128>>>(d_A, d_B, d_C, d_metadata);
 
   cuda_check_error();
 
