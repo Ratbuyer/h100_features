@@ -144,7 +144,7 @@ int main()
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
   u_int32_t *metadata_array = nullptr;
-  int metadata_size = inspect_metadata(d_A, metadata_array, M, K);
+  int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
 
   u_int32_t *d_metadata;
   // cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
