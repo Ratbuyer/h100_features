@@ -33,36 +33,36 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
   __align__(16) __shared__ half B_shared[K * N];
 
   // 8x8 core blocks
-  if (tid == 0)
-  {
-    for (int i = 0; i < M; i++)
-    {
-      for (int j = 0; j < K2; j++)
-      {
-        int block_x = i / 8;
-        int block_row = i % 8;
-        int block_y = j / 8;
-        int block_col = j % 8;
-        int block_id = block_x * 2 + block_y;
-        int offset = block_id * 64 + block_row * 8 + block_col;
-        A_shared[offset] = A[i * K2 + j];
-      }
-    }
+  // if (tid == 0)
+  // {
+  //   for (int i = 0; i < M; i++)
+  //   {
+  //     for (int j = 0; j < K2; j++)
+  //     {
+  //       int block_x = i / 8;
+  //       int block_row = i % 8;
+  //       int block_y = j / 8;
+  //       int block_col = j % 8;
+  //       int block_id = block_x * 2 + block_y;
+  //       int offset = block_id * 64 + block_row * 8 + block_col;
+  //       A_shared[offset] = A[i * K2 + j];
+  //     }
+  //   }
 
-    for (int i = 0; i < K; i++)
-    {
-      for (int j = 0; j < N; j++)
-      {
-        int block_x = i / 8;
-        int block_row = i % 8;
-        int block_y = j / 8;
-        int block_col = j % 8;
-        int block_id = block_x * 1 + block_y;
-        int offset = block_id * 64 + block_row * 8 + block_col;
-        B_shared[offset] = B[i * N + j];
-      }
-    }
-  }
+  //   for (int i = 0; i < K; i++)
+  //   {
+  //     for (int j = 0; j < N; j++)
+  //     {
+  //       int block_x = i / 8;
+  //       int block_row = i % 8;
+  //       int block_y = j / 8;
+  //       int block_col = j % 8;
+  //       int block_id = block_x * 1 + block_y;
+  //       int offset = block_id * 64 + block_row * 8 + block_col;
+  //       B_shared[offset] = B[i * N + j];
+  //     }
+  //   }
+  // }
 
   u_int32_t metadata;
   uint metadata_offset = warp_id * 16 + lane_in_work_group * 8 + group_id;
