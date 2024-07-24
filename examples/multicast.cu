@@ -82,7 +82,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
   {
     for (int i = 0; i < tile_size; ++i)
     {
-      result[clusterBlockRank * tile_size] = tile_shared[i];
+      result[clusterBlockRank * tile_size + i] = tile_shared[i];
     }
   }
 
@@ -90,7 +90,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
   {
     for (int i = 0; i < tile_size; ++i)
     {
-      result[clusterBlockRank * tile_size] = tile_shared[i];
+      result[clusterBlockRank * tile_size + i] = tile_shared[i];
     }
   }
 
@@ -98,7 +98,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
   {
     for (int i = 0; i < tile_size; ++i)
     {
-      result[clusterBlockRank * tile_size] = tile_shared[i];
+      result[clusterBlockRank * tile_size + i] = tile_shared[i];
     }
   }
 
@@ -106,13 +106,9 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
   {
     for (int i = 0; i < tile_size; ++i)
     {
-      result[clusterBlockRank * tile_size] = tile_shared[i];
+      result[clusterBlockRank * tile_size + i] = tile_shared[i];
     }
   }
-
-  __threadfence();
-  __syncthreads();
-  cluster.sync();
 }
 
 int main()
