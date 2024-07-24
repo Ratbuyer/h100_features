@@ -1,5 +1,3 @@
-#pragma once
-
 #include <stdint.h>
 
 __device__ void wgmma_sp_async(

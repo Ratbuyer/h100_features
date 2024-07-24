@@ -8,9 +8,9 @@
 #include <random>
 #include <iostream>
 
-#include "descriptor.cuh"
 #include "matrix_utilities.cuh"
-#include "kernel.cuh"
+#include "profile_utilities.cuh"
+#include "wgmma.cuh"
 
 const int M = 64;
 const int N = 8;
@@ -19,9 +19,8 @@ const int K = 16;
 const int threads_per_block = 32 * 4; // 4 warps
 const int blocks = 1;
 
-__global__ void work(half *A, half *B, half *C)
+__global__ void kernel(half *A, half *B, half *C)
 {
-
   const int tid = threadIdx.x;
   const int warp_id = tid / 32;
   const int lane_id = tid % 32;
@@ -88,17 +87,6 @@ __global__ void work(half *A, half *B, half *C)
 
   asm volatile("wgmma.commit_group.sync.aligned; \n");
 
-  asm volatile("wgmma.mma_async.sync.aligned.m64n8k16.f16.f16.f16 "
-               "{%0, %1}, "
-               "%2, %3, "
-               "1, "
-               "1, 1, "
-               "0, 1;"
-               : "+r"(c[0]), "+r"(c[1])
-               : "l"(desc_a), "l"(desc_b));
-
-  asm volatile("wgmma.commit_group.sync.aligned; \n");
-
   asm volatile("wgmma.wait_group.sync.aligned 0; \n");
 
   __syncthreads();
@@ -135,8 +123,8 @@ int main()
   half h_A[M * K];
   half h_B[K * N];
 
-  fill_fixed(h_A, M, K, 1.0f);
-  fill_fixed(h_B, K, N, 1.0f);
+  fill_random(h_A, M, K);
+  fill_random(h_B, K, N);
 
   for (int i = 0; i < M * N; i++)
   {
@@ -152,7 +140,7 @@ int main()
   cudaMemcpy(d_A, h_A, M * K * sizeof(half), cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
-  work<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
+  kernel<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
   cuda_check_error();
 
