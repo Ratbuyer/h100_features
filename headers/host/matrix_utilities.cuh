@@ -178,21 +178,21 @@ void fill_24(half *matrix, int rows, int cols)
 
   for (int i = 0; i < rows * cols; i += 4)
   {
-    matrix[i] = 0.0;
-    matrix[i + 1] = 0.0;
+    matrix[i] = 1;
+    matrix[i + 1] = 1;
     matrix[i + 2] = 0.0;
     matrix[i + 3] = 0.0;
 
-    int position1 = rand() % 4;
-    int position2 = rand() % 4;
+    // int position1 = rand() % 4;
+    // int position2 = rand() % 4;
 
     // position2 = position2 == position1 ? (position2 + 1) % 4 : position2;
 
     // matrix[i + position1] = __float2half(1.0f);
     // matrix[i + position2] = __float2half(1.0f);
 
-    matrix[i + position1] = __float2half(rand_half());
-    matrix[i + position2] = __float2half(rand_half());
+    // matrix[i + position1] = __float2half(rand_half());
+    // matrix[i + position2] = __float2half(rand_half());
   }
 }
 
