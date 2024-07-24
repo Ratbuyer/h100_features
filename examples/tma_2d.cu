@@ -15,7 +15,7 @@
 #include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
 #include "tma.cuh"
-#include "kernel.cuh"
+#include "profile_utilities.cuh"
 
 // Suppress warning about barrier in shared memory
 TEST_NV_DIAG_SUPPRESS(static_var_with_dynamic_init)
