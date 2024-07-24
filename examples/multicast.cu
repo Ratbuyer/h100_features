@@ -73,11 +73,6 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
 
     bar.wait(std::move(token));
   }
-  else
-  {
-    // wait for the first block to load the data
-    cluster.sync();
-  }
 
   printf("clusterBlockRank %d, threadIdx.x %d\n", clusterBlockRank, threadIdx.x);
 
