@@ -24,8 +24,9 @@ namespace cg = cooperative_groups;
 
 const int array_size = 128;
 const int tile_size = 16;
+const int cluster_size = 4;
 
-__global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
+__global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
 {
   // cluster metadata
   cg::cluster_group cluster = cg::this_cluster();
@@ -100,7 +101,7 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     }
     printf("\n");
   }
-  
+
   cluster.sync();
 
   if (clusterBlockRank == 2 && threadIdx.x == 0)
@@ -152,9 +153,12 @@ int main()
   CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
 
   size_t offset = tile_size * 3; // select the second tile of the array to change
-  kernel<<<4, 128>>>(tensor_map, offset);
+  kernel<<<cluster_size, 128>>>(tensor_map, offset);
 
   cuda_check_error();
+
+  int *d_result = nullptr;
+  cudaMalloc(&d_result, tile_size * 4 * sizeof(int));
 
   cudaFree(d_data);
 
