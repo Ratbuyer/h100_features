@@ -57,7 +57,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
       the first 3 blocks will recieve the data from multicast
       whereas the last block will not
       */
-      uint16_t ctaMask = 0b1101;
+      uint16_t ctaMask = 0b1001;
       asm volatile(
           "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
           "[%0], [%1, {%2}], [%3], %4;\n"
