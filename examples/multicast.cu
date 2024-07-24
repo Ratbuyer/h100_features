@@ -89,6 +89,7 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
+  cluster.sync();
 
   if (clusterBlockRank == 1 && threadIdx.x == 0)
   {
@@ -99,7 +100,8 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     }
     printf("\n");
   }
-
+  
+  cluster.sync();
 
   if (clusterBlockRank == 2 && threadIdx.x == 0)
   {
@@ -111,6 +113,7 @@ __global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("\n");
   }
 
+  cluster.sync();
 
   if (clusterBlockRank == 3 && threadIdx.x == 0)
   {
