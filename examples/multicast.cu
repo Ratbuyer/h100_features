@@ -51,11 +51,13 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
     if (threadIdx.x == 0)
     {
       /*
-      each bit represents a block in the cluster
+      each bit represents a block in the cluster, starting from the least significant bit (the right side)
 
-      here we use block mask 1101, which means
-      the first 3 blocks will recieve the data from multicast
-      whereas the last block will not
+      here we use block mask 1011, which means
+      blocks 0, 1, and 3 will recieve the data from multicast
+      whereas block 2 will not
+
+      we will verify this by printing the result
       */
       uint16_t ctaMask = 0b1011;
       asm volatile(
