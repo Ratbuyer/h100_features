@@ -140,6 +140,7 @@ int main()
 
   u_int32_t *metadata_array = nullptr;
   int metadata_size = inspect_metadata(h_A, metadata_array, M, K);
+  printf("Metadata size: %d\n", metadata_size);
 
   u_int32_t *d_metadata;
   cudaMalloc((void **)&d_metadata, metadata_size * sizeof(u_int32_t));
