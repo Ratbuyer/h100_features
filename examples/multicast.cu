@@ -25,7 +25,7 @@ namespace cg = cooperative_groups;
 const int array_size = 128;
 const int tile_size = 16;
 
-__global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
+__global__ void __cluster_dims__(4, 1, 1) kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
 {
   // cluster metadata
   cg::cluster_group cluster = cg::this_cluster();
@@ -77,7 +77,7 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
   cluster.sync();
 
   // verify block 1 recieved the data
-  if (clusterBlockRank == 1 && threadIdx.x == 0)
+  if (clusterBlockRank == 0 && threadIdx.x == 0)
   {
     printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
@@ -89,7 +89,27 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
 
   cluster.sync();
 
-  if (clusterBlockRank == 0 && threadIdx.x == 0)
+  if (clusterBlockRank == 1 && threadIdx.x == 0)
+  {
+    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    for (int i = 0; i < tile_size; ++i)
+    {
+      printf("%d|", tile_shared[i]);
+    }
+    printf("\n");
+  }
+
+  if (clusterBlockRank == 2 && threadIdx.x == 0)
+  {
+    printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
+    for (int i = 0; i < tile_size; ++i)
+    {
+      printf("%d|", tile_shared[i]);
+    }
+    printf("\n");
+  }
+
+  if (clusterBlockRank == 3 && threadIdx.x == 0)
   {
     printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
@@ -124,7 +144,7 @@ int main()
   CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
 
   size_t offset = tile_size * 3; // select the second tile of the array to change
-  kernel<<<2, 128>>>(tensor_map, offset);
+  kernel<<<4, 128>>>(tensor_map, offset);
 
   cuda_check_error();
 
