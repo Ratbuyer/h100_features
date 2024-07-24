@@ -67,7 +67,8 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
   u_int32_t metadata;
   uint metadata_offset = warp_id * 16 + lane_in_work_group * 8 + group_id;
 
-  metadata = metadata_array[metadata_offset];
+  // metadata = metadata_array[metadata_offset];
+  metadata = 0x44444444;
 
   __syncthreads();
 
@@ -100,11 +101,7 @@ __global__ void kernel(half *A, half *B, half *C, u_int32_t *metadata_array)
 
   __syncthreads();
 
-  // half * reg_ptr = reinterpret_cast<half *>(&reg);
-
-  // if (tid == 0) {
-  //   printf("%f\n", __half2float(reg_ptr[0]));
-  // }
+  asm volatile("wgmma.fence.sync.aligned; \n");
 
   uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
 
