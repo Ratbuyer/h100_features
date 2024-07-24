@@ -82,7 +82,7 @@ __global__ void __cluster_dims__(2, 1, 1) kernel(const __grid_constant__ CUtenso
     printf("clusterBlockRank: %d, threadIdx.x: %d\n", clusterBlockRank, threadIdx.x);
     for (int i = 0; i < tile_size; ++i)
     {
-      printf("value: %d", tile_shared[i]);
+      printf("%d|", tile_shared[i]);
     }
     printf("\n");
   }
