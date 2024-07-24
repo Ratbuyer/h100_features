@@ -8,11 +8,11 @@
 #include <random>
 #include <iostream>
 
-#include "descriptor.cuh"
+
 #include "matrix_utilities.cuh"
 #include "wgmma.cuh"
 #include "wgmma.sp.cuh"
-#include "kernel.cuh"
+#include "profile_utilities.cuh"
 
 const int M = 64;
 const int N = 8;
@@ -40,7 +40,6 @@ __global__ void work(half *A, half *B, half *C, u_int32_t *metadata_array)
   // 8x8 core blocks
   if (tid == 0)
   {
-
     for (int i = 0; i < M; i++)
     {
       for (int j = 0; j < K2; j++)
@@ -51,7 +50,7 @@ __global__ void work(half *A, half *B, half *C, u_int32_t *metadata_array)
         int block_col = j % 8;
         int block_id = block_x * 2 + block_y;
         int offset = block_id * 64 + block_row * 8 + block_col;
-        A_shared[offset] = A[i * K + j];
+        A_shared[offset] = A[i * K2 + j];
       }
     }
 
@@ -84,7 +83,21 @@ __global__ void work(half *A, half *B, half *C, u_int32_t *metadata_array)
 
   asm volatile("wgmma.fence.sync.aligned; \n");
 
-  wgmma_sp_async(c, desc_a, desc_b, metadata);
+    asm volatile("wgmma.mma_async.sp.sync.aligned.m64n8k32.f16.f16.f16 "
+               "{%0, %1}, " // c
+               "%2, %3, "   // desc A, B
+               "%4, "       // meta
+               "0, "       // thread selection
+               "1, "       // scale D
+               "%7, %8, "   // +/- scale A, B
+               "%9, %10;"   // transpose A, B
+               : "+r"(c[0]), "+r"(c[1])
+               : "l"(desc_a), "l"(desc_b),
+                 "r"(metadata),   // metadata
+                 "r"(0),        // thread selection
+                 "r"(1),          // scale D
+                 "n"(1), "n"(1),  // +- scale A, B
+                 "n"(0), "n"(1)); // transpose A, B
 
   asm volatile("wgmma.commit_group.sync.aligned; \n");
 
