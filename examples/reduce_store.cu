@@ -33,7 +33,7 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
   {
     if (i < tile_size)
     {
-      tile_shared[i] = 10;
+      tile_shared[i] = 3;
     }
   }
 
@@ -46,6 +46,9 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
   if (threadIdx.x == 0)
   {
     // .add, .min, .max, .inc, .dec, .and, .or, .xor
+    // in here we use .add to demonstrate
+    // so this instruction will do element wise addition
+    // with thet tile in the global memory and shared memory and store the result back to global memory tile
     asm volatile(
         "cp.reduce.async.bulk.tensor.1d.global.shared::cta.add.tile.bulk_group "
         "[%0, {%1}], [%2];\n"
