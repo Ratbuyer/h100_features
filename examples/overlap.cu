@@ -12,6 +12,7 @@
 #include <cuda_runtime.h>
 
 #include "profile_utilities.cuh"
+#include "wgmma.cuh"
 
 const int threads_per_block = 32 * 4; // 4 warps
 const int blocks = 1;
