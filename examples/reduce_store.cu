@@ -33,7 +33,7 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
   {
     if (i < tile_size)
     {
-      tile_shared[i] = 2;
+      tile_shared[i] = 3;
     }
   }
 
@@ -46,7 +46,7 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
   if (threadIdx.x == 0)
   {
     asm volatile(
-        "cp.async.bulk.tensor.1d.global.shared::cta.tile.bulk_group "
+        "cp.reduce.async.bulk.tensor.1d.global.shared::cta.add.tile.bulk_group "
         "[%0, {%1}], [%2];\n"
         :
         : "l"(&tensor_map),
@@ -70,7 +70,7 @@ int main()
   int h_data[array_size];
   for (size_t i = 0; i < array_size; ++i)
   {
-    h_data[i] = 1;
+    h_data[i] = 2;
   }
 
   // print the array before the kernel
