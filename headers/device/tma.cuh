@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
 
-
 enum Cache_Policy
 {
   evict_normal,
@@ -53,5 +52,24 @@ __device__ void copy_async_2d_prefetch(const CUtensorMap *__tensor_map, int coor
       : "l"(__tensor_map),
         "r"(coordinate1),
         "r"(coordinate2)
+      : "memory");
+}
+
+inline _LIBCUDACXX_DEVICE void cp_async_bulk_tensor_1d_shared_to_global_multicast(
+    void *__dest,
+    const CUtensorMap *__tensor_map,
+    int __c0,
+    ::cuda::barrier<::cuda::thread_scope_block> &__bar,
+    uint16_t __ctaMask)
+{
+  asm volatile(
+      "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
+      "[%0], [%1, {%2}], [%3], %4;\n"
+      :
+      : "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(__dest))),
+        "l"(&__tensor_map),
+        "r"(__c0),
+        "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(::cuda::device::barrier_native_handle(__bar)))),
+        "h"(__ctaMask)
       : "memory");
 }
