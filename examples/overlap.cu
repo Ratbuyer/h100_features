@@ -11,8 +11,7 @@
 #include <iostream>
 #include <cuda_runtime.h>
 
-#include "descriptor.cuh"
-#include "kernel.cuh"
+#include "profile_utilities.cuh"
 
 const int threads_per_block = 32 * 4; // 4 warps
 const int blocks = 1;
