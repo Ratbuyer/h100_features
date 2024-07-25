@@ -26,7 +26,7 @@ __global__ void __cluster_dims__(2, 1, 1) cluster_kernel()
   if (tid == 0) {
     printf("cluster_size: %d\n", cluster_size);
   }
-  
+
   // initialize shared memory, block 1 has one value higher than block 0
   smem[threadIdx.x] = blockIdx.x + threadIdx.x;
 

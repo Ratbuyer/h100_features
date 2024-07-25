@@ -1,7 +1,13 @@
 // TMA api wrappers
 
+#pragma once
+
+// Suppress warning about barrier in shared memory
+#pragma nv_diag_suppress static_var_with_dynamic_init
+
 #include <stdint.h>
 #include <cudaTypedefs.h> // PFN_cuTensorMapEncodeTiled, CUtensorMap
+
 
 enum Cache_Policy
 {

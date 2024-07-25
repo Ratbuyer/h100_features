@@ -15,7 +15,6 @@ Sparse means matrix A follows a 2:4 format
 
 #include "matrix_utilities.cuh"
 #include "wgmma.cuh"
-#include "wgmma.sp.cuh"
 #include "profile_utilities.cuh"
 
 const int M = 64;
