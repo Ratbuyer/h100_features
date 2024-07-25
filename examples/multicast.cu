@@ -7,7 +7,7 @@ to show the changes are done.
 */
 
 // supress warning about barrier in shared memory on line 32
-#pragma nv_diag_suppress static_var_with_dynamic_init
+
 
 #include <cuda/barrier>
 #include <iostream>
@@ -61,7 +61,16 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
       we will verify this by printing the result
       */
       uint16_t ctaMask = 0b1011;
-      cp_async_bulk_tensor_1d_shared_to_global_multicast(tile_shared, &tensor_map, coordinate, bar, ctaMask);
+      asm volatile(
+          "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
+          "[%0], [%1, {%2}], [%3], %4;\n"
+          :
+          : "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(tile_shared))),
+            "l"(&tensor_map),
+            "r"(coordinate),
+            "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(::cuda::device::barrier_native_handle(bar)))),
+            "h"(ctaMask)
+          : "memory");
 
       token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(tile_shared));
     }
