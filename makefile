@@ -34,6 +34,9 @@ tma_2d:
 multicast:
 	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/multicast.cu
 
+reduce:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/reduce_store.cu
+
 pull:
 	git pull
 	make all
