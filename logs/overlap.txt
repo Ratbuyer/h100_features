@@ -1,0 +1,4 @@
+Cuda core time: 93.420830
+Tensor core time: 112.665955
+Overlap time v1: 196.250244
+Overlap time v2: 138.102631
