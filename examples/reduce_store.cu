@@ -49,7 +49,7 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
         "cp.async.bulk.tensor.1d.global.shared::cta.tile.bulk_group "
         "[%0, {%1}], [%2];\n"
         :
-        : "l"(tensor_map),
+        : "l"(&tensor_map),
           "r"(coordinate),
           "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(tile_shared)))
         : "memory");

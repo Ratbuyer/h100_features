@@ -7,7 +7,7 @@ OUTPUT=bins/bin
 
 
 all:
-	make sparse
+	make reduce
 	make run
 
 test:
