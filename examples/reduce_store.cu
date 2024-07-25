@@ -33,7 +33,7 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
   {
     if (i < tile_size)
     {
-      tile_shared[i] = 3;
+      tile_shared[i] = 10;
     }
   }
 
@@ -45,6 +45,7 @@ __global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coord
   // 6. Initiate TMA transfer to copy shared memory to global memory
   if (threadIdx.x == 0)
   {
+    // .add, .min, .max, .inc, .dec, .and, .or, .xor
     asm volatile(
         "cp.reduce.async.bulk.tensor.1d.global.shared::cta.add.tile.bulk_group "
         "[%0, {%1}], [%2];\n"
