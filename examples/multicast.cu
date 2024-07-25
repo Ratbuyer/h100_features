@@ -16,6 +16,7 @@ to show the changes are done.
 #include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
 #include "profile_utilities.cuh"
+#include "tma.cuh"
 
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
@@ -60,16 +61,7 @@ __global__ void __cluster_dims__(cluster_size, 1, 1) kernel(const __grid_constan
       we will verify this by printing the result
       */
       uint16_t ctaMask = 0b1011;
-      asm volatile(
-          "cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster "
-          "[%0], [%1, {%2}], [%3], %4;\n"
-          :
-          : "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(tile_shared))),
-            "l"(&tensor_map),
-            "r"(coordinate),
-            "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(::cuda::device::barrier_native_handle(bar)))),
-            "h"(ctaMask)
-          : "memory");
+      cp_async_bulk_tensor_1d_shared_to_global_multicast(tile_shared, &tensor_map, coordinate, bar, ctaMask);
 
       token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(tile_shared));
     }
