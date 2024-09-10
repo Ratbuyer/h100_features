@@ -40,7 +40,7 @@ __global__ void add_one_kernel(int *data, size_t offset)
         :
         : "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(smem_data))),
           "l"(static_cast<_CUDA_VSTD::uint64_t>(__cvta_generic_to_global(data + offset))),
-          "r"((int) sizeof(smem_data)),
+          "r"(4096),
           "r"(static_cast<_CUDA_VSTD::uint32_t>(__cvta_generic_to_shared(::cuda::device::barrier_native_handle(bar))))
         : "memory");
   }
