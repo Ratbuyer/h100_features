@@ -8,6 +8,7 @@
     "__target_macros": "cpp",
     "atomic": "cpp",
     "utility": "cpp",
-    "__verbose_abort": "cpp"
+    "__verbose_abort": "cpp",
+    "type_traits": "cpp"
   }
 }
