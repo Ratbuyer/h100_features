@@ -40,6 +40,9 @@ multicast:
 reduce:
 	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/reduce_store.cu
 
+tma_1d_ptx:
+	${NVCC} -arch=sm_${sm_version} ${OPTIMIZATION} ${INCLUDES} ${LINKS} -o ${OUTPUT} examples/tma_1d_ptx.cu
+
 pull:
 	git pull
 	make all
