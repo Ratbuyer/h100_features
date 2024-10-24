@@ -77,6 +77,24 @@ void fill_fixed(half *matrix, int rows, int cols, float value)
   }
 }
 
+void fill_tile(half *matrix, int rows, int cols)
+{
+  for (int i = 0; i < rows; i++)
+  {
+    for (int j = 0; j < cols; j++)
+    {
+      if (i / 8 == 0 && j / 8 == 0)
+      {
+        matrix[i * cols + j] = __float2half(1.0f);
+      }
+      else
+      {
+        matrix[i * cols + j] = __float2half(0.0f);
+      }
+    }
+  }
+}
+
 // element in each subtile has the same value,
 // which is their tile number in row major order
 void fill_tilewise(int *matrix, int rows, int cols, int tile_size_row, int tile_size_col)

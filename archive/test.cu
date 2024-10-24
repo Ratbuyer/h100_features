@@ -218,8 +218,8 @@ int main() {
 
   fill_fixed(h_C, M, N, 0);
 
-  fill_random(h_A, M, K);
-  fill_random(h_B, K, N);
+  fill_tile(h_A, M, K);
+  fill_tile(h_B, K, N);
 
   half *d_A, *d_B;
 
