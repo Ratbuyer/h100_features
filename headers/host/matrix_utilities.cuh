@@ -85,11 +85,11 @@ void fill_tile(half *matrix, int rows, int cols)
     {
       if (i / 8 == 0 && j / 8 == 0)
       {
-        matrix[i * cols + j] = __float2half(1.0f);
+        matrix[j * rows + i] = __float2half(1.0f);
       }
       else
       {
-        matrix[i * cols + j] = __float2half(0.0f);
+        matrix[j * rows + i] = __float2half(0.0f);
       }
     }
   }
