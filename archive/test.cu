@@ -230,7 +230,7 @@ int main() {
   cudaMemcpy(d_A, h_A, M * K * sizeof(half), cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
 
-  kernel_order<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
+  kernel<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
   cuda_check_error();
 
@@ -244,7 +244,7 @@ int main() {
 
   CPU_gemm(h_A, h_B, h_CPU, M, N, K);
 
-  kernel<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
+  kernel_order<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
   cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 
