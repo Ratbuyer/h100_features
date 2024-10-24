@@ -126,30 +126,6 @@ __global__ void kernel(half *A, half *B, half *C) {
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-multiply-and-accumulate-instruction-wgmma-mma-async
   // 8x8 core blocks, we use one thread here to
   // easy demonstrate the required layout
-  if (tid == 0) {
-    for (int i = 0; i < M; i++) {
-      for (int j = 0; j < K; j++) {
-        int block_x = i / 8;
-        int block_row = i % 8;
-        int block_y = j / 8;
-        int block_col = j % 8;
-        int block_id = block_x * 2 + block_y;
-        int offset = block_id * 64 + block_row * 8 + block_col;
-        A_shared[offset] = A[i * K + j];
-      }
-    }
-    for (int i = 0; i < K; i++) {
-      for (int j = 0; j < N; j++) {
-        int block_x = i / 8;
-        int block_row = i % 8;
-        int block_y = j / 8;
-        int block_col = j % 8;
-        int block_id = block_x * 1 + block_y;
-        int offset = block_id * 64 + block_row * 8 + block_col;
-        B_shared[offset] = B[i * N + j];
-      }
-    }
-  }
 
   __syncthreads();
 
