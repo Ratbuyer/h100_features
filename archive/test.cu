@@ -156,8 +156,11 @@ __global__ void kernel(half *A, half *B, half *C) {
             A_shared[i] = A[i];
       }
 
-        for (int i = 0; i < K * N; i++) {
-                B_shared[i] = B[i];
+        // load b but transpose it
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < K; j++) {
+                B_shared[i * K + j] = B[j * N + i];
+            }
         }
   }
 

@@ -85,15 +85,37 @@ void fill_tile(half *matrix, int rows, int cols)
     {
       if (i / 8 == 0 && j / 8 == 0)
       {
-        matrix[j * rows + i] = __float2half(1.0f);
+        matrix[i * cols + j] = __float2half(1.0f);
       }
       else
       {
-        matrix[j * rows + i] = __float2half(0.0f);
+        matrix[i * cols + j] = __float2half(0.0f);
       }
     }
   }
 }
+
+void transpose(half *matrix, int rows, int cols) {
+    // Create a temporary matrix to store the result
+    half* temp = new half[rows * cols];
+
+    // Transpose the matrix
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            // Swap element at (i, j) to (j, i)
+            temp[j * rows + i] = matrix[i * cols + j];
+        }
+    }
+
+    // Copy the transposed matrix back to the original matrix
+    for (int i = 0; i < rows * cols; ++i) {
+        matrix[i] = temp[i];
+    }
+
+    // Free the temporary matrix
+    delete[] temp;
+}
+
 
 // element in each subtile has the same value,
 // which is their tile number in row major order
