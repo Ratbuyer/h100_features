@@ -1,120 +1,154 @@
 /*
-This code uses TMA's 1d tensor load to load
-a portion of an array to shared memory and then
-change the value in the shared memory and uses TMA's store
-to store the portion back to global memory. We print the result
-to show the changes are done.
+This code demonstrates how to use the dense wgmma instructions
+to perform matrix multiplication
 */
 
-// supress warning about barrier in shared memory on line 32
-#pragma nv_diag_suppress static_var_with_dynamic_init
-
-#include <cuda/barrier>
+#include <assert.h>
+#include <cuda.h>
+#include <cuda_fp16.h>
 #include <iostream>
+#include <mma.h>
+#include <random>
+#include <stdio.h>
 
-#include "tma_tensor_map.cuh"
 #include "matrix_utilities.cuh"
 #include "profile_utilities.cuh"
+#include "wgmma.cuh"
 
-using barrier = cuda::barrier<cuda::thread_scope_block>;
-namespace cde = cuda::device::experimental;
+const int M = 64;
+const int N = 8;
+const int K = 16;
 
-const int array_size = 128;
-const int tile_size = 16;
+const int threads_per_block = 32 * 4; // 4 warps
+const int blocks = 1;
 
-__global__ void kernel(const __grid_constant__ CUtensorMap tensor_map, int coordinate)
-{
-  // Shared memory buffers for tile. The destination shared memory buffer of
-  // a bulk operations should be 16 byte aligned.
-  __shared__ alignas(16) int tile_shared[tile_size];
+__global__ void kernel(half *A, half *B, half *C) {
+  // metadata
+  const int tid = threadIdx.x;
+  const int warp_id = tid / 32;
+  const int lane_id = tid % 32;
+  const int group_id = lane_id >> 2;
+  const int lane_in_group = lane_id & 3;
 
-  // 1. a) Initialize shared memory barrier with the number of threads participating in the barrier.
-  //    b) Make initialized barrier visible in async proxy.
-  __shared__ barrier bar;
-  if (threadIdx.x == 0)
-  {
-    init(&bar, blockDim.x);              // a)
-    cde::fence_proxy_async_shared_cta(); // b)
-  }
   __syncthreads();
 
-  // 2. Initiate TMA transfer to copy global to shared memory.
-  barrier::arrival_token token;
-  if (threadIdx.x == 0)
-  {
-    cde::cp_async_bulk_tensor_1d_global_to_shared(tile_shared, &tensor_map, coordinate, bar);
-    // 3a. Arrive on the barrier and tell how many bytes are expected to come in (the transaction count)
-    token = cuda::device::barrier_arrive_tx(bar, 1, sizeof(tile_shared));
-  }
-  else
-  {
-    // 3b. Rest of threads just arrive
-    token = bar.arrive();
-  }
+  __align__(16) __shared__ half A_shared[M * K];
+  __align__(16) __shared__ half B_shared[K * N];
 
-  // 3c. Wait for the data to have arrived.
-  bar.wait(std::move(token));
-
-  // 4. change the value in shared memory
-  for (int i = threadIdx.x; i < array_size; i += blockDim.x)
-  {
-    if (i < tile_size)
-    {
-      tile_shared[i] += 1;
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-multiply-and-accumulate-instruction-wgmma-mma-async
+  // 8x8 core blocks, we use one thread here to
+  // easy demonstrate the required layout
+  if (tid == 0) {
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < K; j++) {
+        int block_x = i / 8;
+        int block_row = i % 8;
+        int block_y = j / 8;
+        int block_col = j % 8;
+        int block_id = block_x * 2 + block_y;
+        int offset = block_id * 64 + block_row * 8 + block_col;
+        A_shared[offset] = A[i * K + j];
+      }
+    }
+    for (int i = 0; i < K; i++) {
+      for (int j = 0; j < N; j++) {
+        int block_x = i / 8;
+        int block_row = i % 8;
+        int block_y = j / 8;
+        int block_col = j % 8;
+        int block_id = block_x * 1 + block_y;
+        int offset = block_id * 64 + block_row * 8 + block_col;
+        B_shared[offset] = B[i * N + j];
+      }
     }
   }
 
-  // 5. Wait for shared memory writes to be visible to TMA engine.
-  cde::fence_proxy_async_shared_cta();
   __syncthreads();
-  // After syncthreads, writes by all threads are visible to TMA engine.
 
-  // 6. Initiate TMA transfer to copy shared memory to global memory
-  if (threadIdx.x == 0)
-  {
-    cde::cp_async_bulk_tensor_1d_shared_to_global(&tensor_map, coordinate, tile_shared);
-    // 7. Wait for TMA transfer to have finished reading shared memory.
-    // Create a "bulk async-group" out of the previous bulk copy operation.
-    cde::cp_async_bulk_commit_group();
-    // Wait for the group to have completed reading from shared memory.
-    cde::cp_async_bulk_wait_group_read<0>();
-  }
+  // create descriptors for the matrices
+  GmmaDescriptor desc_a = make_desc_a(A_shared);
+  GmmaDescriptor desc_b = make_desc_b(B_shared);
 
+  // accumulator
+  uint32_t c[2] = {};
+
+  // called whenever the accumulator is accessed
+  warpgroup_arrive();
+
+  // wgmma.mma_async.sync.aligned.shape.dtype.f16.f16  d, a-desc, b-desc,
+  // scale-d, imm-scale-a, imme-scale-b, imm-trans-a, imm-trans-b;
+  // wgmma.mma_async.sync.aligned.shape.dtype.f16.f16  d, a, b-desc, scale-d,
+  // imm-scale-a, imme-scale-b, imm-trans-b;
+  asm volatile("wgmma.mma_async.sync.aligned.m64n8k16.f16.f16.f16 "
+               "{%0, %1}, " // accumulator
+               "%2, %3, "   // matrix a descriptor
+               "1, "        // 0 => D = A*B, 1 => D = D + A*B
+               "1, 1, " // 0 => no scaling, 1 => scaling, scaling means times -1
+                        // to a or b
+               "0, 1;"  // transpose a and b, 0 => no transpose, 1 => transpose
+               : "+r"(c[0]), "+r"(c[1])
+               : "l"(desc_a), "l"(desc_b));
+
+  // commit, start the computation
+  warpgroup_commit_batch();
+
+  // wait for the previous commit to finish
+  warpgroup_wait<0>();
+
+  // thread fence needed for async operations
   __threadfence();
-  __syncthreads();
+
+  warpgroup_arrive();
+
+  uint32_t *C_ptr = reinterpret_cast<uint32_t *>(C);
+
+  int offset1 = warp_id * 16 * 4 + group_id * 4 + lane_in_group;
+  int offset2 = warp_id * 16 * 4 + (group_id + 8) * 4 + lane_in_group;
+
+  // write back to global memory
+  C_ptr[offset1] = c[0];
+  C_ptr[offset2] = c[1];
 }
 
-int main()
-{
-  // initialize array and fill it with values
-  int h_data[array_size];
-  for (size_t i = 0; i < array_size; ++i)
-  {
-    h_data[i] = i;
-  }
+int main() {
 
-  // print the array before the kernel
-  // one tile per line
-  print_matrix(h_data, array_size / tile_size, tile_size);
+  half *d_C;
+  half h_C[M * N];
+  half h_CPU[M * N];
+  half h_A[M * K];
+  half h_B[K * N];
 
-  // transfer array to device
-  int *d_data = nullptr;
-  cudaMalloc(&d_data, array_size * sizeof(int));
-  cudaMemcpy(d_data, h_data, array_size * sizeof(int), cudaMemcpyHostToDevice);
+  fill_fixed(h_C, M, N, 0);
 
-  // create tensor map
-  CUtensorMap tensor_map = create_1d_tensor_map(array_size, tile_size, d_data);
+  fill_random(h_A, M, K);
+  fill_random(h_B, K, N);
 
-  size_t offset = tile_size * 3; // select the second tile of the array to change
-  kernel<<<1, 128>>>(tensor_map, offset);
+  half *d_A, *d_B;
+
+  cudaMalloc((void **)&d_A, M * K * sizeof(half));
+  cudaMalloc((void **)&d_B, K * N * sizeof(half));
+  cudaMalloc((void **)&d_C, M * N * sizeof(half));
+
+  cudaMemcpy(d_A, h_A, M * K * sizeof(half), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_B, h_B, K * N * sizeof(half), cudaMemcpyHostToDevice);
+
+  kernel<<<blocks, threads_per_block>>>(d_A, d_B, d_C);
 
   cuda_check_error();
 
-  cudaMemcpy(h_data, d_data, array_size * sizeof(int), cudaMemcpyDeviceToHost);
-  cudaFree(d_data);
+  cudaMemcpy(h_C, d_C, M * N * sizeof(half), cudaMemcpyDeviceToHost);
 
-  // print the array after the kernel
-  print_matrix(h_data, array_size / tile_size, tile_size);
+  print_matrix(h_A, M, K);
+
+  print_matrix(h_B, K, N);
+
+  print_matrix(h_C, M, N);
+
+  CPU_gemm(h_A, h_B, h_CPU, M, N, K);
+
+  compare_matrices(h_CPU, h_C, M, N);
+
+  // print_differnce(h_C, h_CPU, M, N, 0.0f);
 
   return 0;
 }
